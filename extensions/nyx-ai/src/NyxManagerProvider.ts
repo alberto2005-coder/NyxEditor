@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
 
 export class NyxManagerProvider {
-    public static readonly viewType = 'nyx-manager';
-
-    public static async open(extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
+    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         const panel = vscode.window.createWebviewPanel(
-            this.viewType,
-            'Nyx Manager: Configuración Global',
+            'nyxManager',
+            'Nyx Manager',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -22,29 +20,33 @@ export class NyxManagerProvider {
             claude: !!(await context.secrets.get('claude-3-5'))
         });
 
-        panel.webview.html = this._getHtmlForWebview(panel.webview, extensionUri, await getStatus());
+        const updateHtml = async () => {
+            panel.webview.html = this._getHtmlForWebview(panel.webview, extensionUri, await getStatus());
+        };
+
+        updateHtml();
 
         panel.webview.onDidReceiveMessage(async (message) => {
             switch (message.command) {
                 case 'saveKey':
                     await context.secrets.store(message.provider, message.key);
                     vscode.window.showInformationMessage(`Llave de ${message.provider} guardada correctamente.`);
-                    panel.webview.html = this._getHtmlForWebview(panel.webview, extensionUri, await getStatus());
+                    updateHtml();
                     vscode.commands.executeCommand('nyx-ai.refreshModels');
                     break;
                 case 'deleteKey':
                     await context.secrets.delete(message.provider);
                     vscode.window.showInformationMessage(`Llave de ${message.provider} eliminada.`);
-                    panel.webview.html = this._getHtmlForWebview(panel.webview, extensionUri, await getStatus());
+                    updateHtml();
                     vscode.commands.executeCommand('nyx-ai.refreshModels');
                     break;
             }
         });
     }
 
-    private static _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri, keysStatus: any) {
+    private static _getHtmlForWebview(_webview: vscode.Webview, _extensionUri: vscode.Uri, keysStatus: any) {
         return `<!DOCTYPE html>
-        <html lang="en">
+        <html lang="es">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">

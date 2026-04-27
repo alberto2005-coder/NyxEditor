@@ -1,16 +1,13 @@
 import * as vscode from 'vscode';
-import { ZenAudioService } from './ZenAudioService';
 
 export class ChatWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'nyxeditor-chat-view';
     private _view?: vscode.WebviewView;
     private _tokenMeter?: vscode.StatusBarItem;
-    private _availableModels: {id: string, label: string}[] = [];
 
     constructor(private readonly _extensionUri: vscode.Uri, private readonly _context: vscode.ExtensionContext) { }
 
     public async updateAvailableModels(models: {id: string, label: string}[]) {
-        this._availableModels = models;
         if (this._view) {
             this._view.webview.postMessage({ type: 'updateModels', models });
         }
@@ -28,20 +25,23 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
-        // Preparar URIs de audio local
-        const rainUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'rain.mp3'));
-        const forestUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'forest.mp3'));
-        const lofiUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'lofi..mp3'));
+        // Mantener el estado vivo aunque cambies de pestaña
+        (webviewView as any).description = "AI Chat";
+        webviewView.show?.(true); // Intentar mantener foco
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, {
-            rain: rainUri.toString(),
-            forest: forestUri.toString(),
-            lofi: lofiUri.toString()
-        });
+        // Esta es la clave: evita que se reinicie al cambiar de vista
+        // Nota: webviewView no tiene retainContext directamente en la interfaz base,
+        // pero podemos gestionar la persistencia enviando el estado al frontend.
+
+        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         // Escuchar mensajes del Panel (Frontend)
         webviewView.webview.onDidReceiveMessage(async (data: any) => {
             switch (data.type) {
+                case 'ready':
+                    // El frontend está listo, mandamos los modelos
+                    vscode.commands.executeCommand('nyx-ai.refreshModels');
+                    break;
                 case 'saveKey':
                     // Guardar llave de forma encriptada
                     await this._context.secrets.store(data.provider, data.key);
@@ -49,14 +49,20 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'askAI':
                     // Mapeo inteligente de modelos a proveedores de llaves
-                    let providerId = data.provider.includes(':') ? data.provider.split(':')[0] : data.provider;
-                    if (providerId === 'gemini-pro') providerId = 'google';
-                    if (providerId === 'gpt-4o') providerId = 'openai';
+                    const [providerId, modelId] = data.provider.includes(':') ? data.provider.split(':') : ['google', data.provider];
                     
-                    const key = await this._context.secrets.get(providerId);
-                    
+                    // Mapeo de nombres de secretos
+                    let secretKey = providerId;
+                    if (providerId === 'google') secretKey = 'google';
+                    if (providerId === 'openai') secretKey = 'openai';
+                    if (providerId === 'anthropic') secretKey = 'claude-3-5';
+                    if (providerId === 'grok') secretKey = 'grok-1';
+                    if (providerId === 'groq') secretKey = 'groq';
+
+                    const key = await this._context.secrets.get(secretKey);
+
                     if (!key) {
-                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${providerId} en el Nyx Manager.` });
+                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${secretKey} en el Nyx Manager.` });
                         return;
                     }
 
@@ -93,9 +99,8 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     try {
                         let responseText = "";
                         const fullPrompt = `CONTEXTO DEL PROYECTO:\n${workspaceContext}\n\nPREGUNTA DEL USUARIO: ${data.text}\n\nINSTRUCCIONES: Si quieres editar o crear un archivo, usa el formato: [WRITE_FILE: ruta/del/archivo] ...contenido... [/WRITE_FILE]`;
-                        
-                        if (data.provider.startsWith('groq:')) {
-                            const modelId = data.provider.split(':')[1];
+
+                        if (providerId === 'groq') {
                             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                                 method: 'POST',
                                 headers: {
@@ -105,17 +110,17 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                                 body: JSON.stringify({
                                     model: modelId,
                                     messages: [
-                                        { role: 'system', content: 'Eres Nyx, un asistente experto en programación integrado en NyxEditor. Puedes ver y editar archivos del proyecto.' },
+                                        { role: 'system', content: 'Eres Nyx, un asistente experto en programación integrado en NyxEditor.' },
                                         { role: 'user', content: fullPrompt }
                                     ],
                                     stream: false
                                 })
                             });
                             const result: any = await response.json();
-                            responseText = result.choices?.[0]?.message?.content || "Error en la respuesta.";
-                        } 
-                        else if (data.provider === 'gemini-pro') {
-                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`, {
+                            responseText = result.choices?.[0]?.message?.content || "Error en la respuesta de Groq.";
+                        }
+                        else if (providerId === 'google') {
+                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -123,7 +128,54 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                                 })
                             });
                             const result: any = await response.json();
-                            responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Error en la respuesta.";
+                            responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Error en la respuesta de Google.";
+                        }
+                        else if (providerId === 'openai') {
+                            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${key}`
+                                },
+                                body: JSON.stringify({
+                                    model: modelId,
+                                    messages: [{ role: 'user', content: fullPrompt }]
+                                })
+                            });
+                            const result: any = await response.json();
+                            responseText = result.choices?.[0]?.message?.content || "Error en OpenAI.";
+                        }
+                        else if (providerId === 'anthropic') {
+                            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-api-key': key,
+                                    'anthropic-version': '2023-06-01'
+                                },
+                                body: JSON.stringify({
+                                    model: modelId,
+                                    max_tokens: 1024,
+                                    messages: [{ role: 'user', content: fullPrompt }]
+                                })
+                            });
+                            const result: any = await response.json();
+                            responseText = result.content?.[0]?.text || "Error en Anthropic.";
+                        }
+                        else if (providerId === 'grok') {
+                            const response = await fetch('https://api.x.ai/v1/chat/completions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${key}`
+                                },
+                                body: JSON.stringify({
+                                    model: modelId,
+                                    messages: [{ role: 'user', content: fullPrompt }]
+                                })
+                            });
+                            const result: any = await response.json();
+                            responseText = result.choices?.[0]?.message?.content || "Error en Grok.";
                         }
 
                         // Lógica de edición de archivos (Escribir en disco)
@@ -132,7 +184,7 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                         while ((match = writeFileRegex.exec(responseText)) !== null) {
                             const filePath = match[1];
                             const content = match[2].trim();
-                            
+
                             try {
                                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                                 if (workspaceFolder) {
@@ -168,7 +220,7 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, audioUris: any = {}) {
+    private _getHtmlForWebview(webview: vscode.Webview) {
         const getNonce = () => {
             let text = '';
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -192,11 +244,11 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     --glass-bg: rgba(255, 255, 255, 0.05);
                     --glass-border: rgba(255, 255, 255, 0.1);
                 }
-                body { 
-                    padding: 0; 
+                body {
+                    padding: 0;
                     margin: 0;
-                    color: var(--vscode-foreground); 
-                    font-family: var(--vscode-font-family); 
+                    color: var(--vscode-foreground);
+                    font-family: var(--vscode-font-family);
                     background: transparent;
                     display: flex;
                     flex-direction: column;
@@ -210,16 +262,16 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     padding: 12px;
                     gap: 12px;
                 }
-                #chat-container { 
+                #chat-container {
                     flex: 1;
-                    overflow-y: auto; 
+                    overflow-y: auto;
                     padding-right: 4px;
                     scrollbar-width: thin;
                 }
-                .header { 
-                    display: flex; 
+                .header {
+                    display: flex;
                     gap: 8px;
-                    align-items: center; 
+                    align-items: center;
                 }
                 .glass-panel {
                     background: var(--glass-bg);
@@ -227,11 +279,11 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     border-radius: 8px;
                     backdrop-filter: blur(10px);
                 }
-                select, textarea, input { 
-                    background: var(--vscode-input-background); 
-                    color: var(--vscode-input-foreground); 
-                    border: 1px solid var(--vscode-input-border); 
-                    padding: 8px; 
+                select, textarea, input {
+                    background: var(--vscode-input-background);
+                    color: var(--vscode-input-foreground);
+                    border: 1px solid var(--vscode-input-border);
+                    padding: 8px;
                     border-radius: 4px;
                     font-family: inherit;
                 }
@@ -250,15 +302,15 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     transition: all 0.2s;
                 }
                 .settings-btn:hover { background: var(--glass-bg); }
-                .settings-panel { 
+                .settings-panel {
                     padding: 12px;
                     display: flex;
                     flex-direction: column;
                     gap: 8px;
                 }
-                .msg { 
-                    margin: 12px 0; 
-                    padding: 10px 14px; 
+                .msg {
+                    margin: 12px 0;
+                    padding: 10px 14px;
                     border-radius: 12px;
                     max-width: 85%;
                     line-height: 1.4;
@@ -266,15 +318,15 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     animation: fadeIn 0.3s ease;
                 }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-                .user { 
-                    background: var(--vscode-button-background); 
+                .user {
+                    background: var(--vscode-button-background);
                     color: var(--vscode-button-foreground);
-                    align-self: flex-end; 
+                    align-self: flex-end;
                     margin-left: auto;
                     border-bottom-right-radius: 2px;
                 }
-                .ai { 
-                    background: var(--glass-bg); 
+                .ai {
+                    background: var(--glass-bg);
                     border: 1px solid var(--glass-border);
                     align-self: flex-start;
                     border-bottom-left-radius: 2px;
@@ -284,16 +336,16 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     flex-direction: column;
                     gap: 8px;
                 }
-                textarea { 
-                    width: calc(100% - 18px); 
-                    resize: none; 
+                textarea {
+                    width: calc(100% - 18px);
+                    resize: none;
                     min-height: 60px;
                     border-radius: 8px;
                 }
-                .primary-btn { 
-                    background: var(--vscode-button-background); 
-                    color: var(--vscode-button-foreground); 
-                    cursor: pointer; 
+                .primary-btn {
+                    background: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                    cursor: pointer;
                     padding: 8px 16px;
                     border: none;
                     border-radius: 4px;
@@ -322,10 +374,7 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
             <div class="main-container">
                 <div class="header">
                     <select id="model-select">
-                        <option value="gemini-pro">Gemini 1.5 Pro</option>
-                        <option value="claude-3-5">Claude 3.5 Sonnet</option>
-                        <option value="grok-1">Grok-1 (𝕏)</option>
-                        <option value="gpt-4o">GPT-4o</option>
+                        <option>Cargando modelos...</option>
                     </select>
                     <button id="settings-btn" class="settings-btn" title="Configuración">⚙</button>
                     <button id="manager-btn" class="settings-btn" title="Nyx Manager">🏠</button>
@@ -342,15 +391,35 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     <button id="send-btn" class="primary-btn">Enviar Mensaje</button>
                     <div style="display: flex; gap: 8px;">
                         <button id="ghost-btn" class="secondary-btn">👻 Sandbox</button>
-                        <button id="zen-btn" class="secondary-btn">🎵 Zen Audio</button>
                     </div>
                 </div>
             </div>
 
             <script nonce="${nonce}">
                 const vscode = acquireVsCodeApi();
+
+                // Notificar que estamos listos para recibir modelos
+                window.onload = () => {
+                    vscode.postMessage({ type: 'ready' });
+                };
+
                 const settingsPanel = document.getElementById('settings');
                 const chatContainer = document.getElementById('chat-container');
+                const modelSelect = document.getElementById('model-select');
+
+                // RECUPERAR ESTADO PERSISTENTE
+                const previousState = vscode.getState();
+                if (previousState) {
+                    if (previousState.chatHTML) chatContainer.innerHTML = previousState.chatHTML;
+                    if (previousState.model) modelSelect.value = previousState.model;
+                }
+
+                function saveState() {
+                    vscode.setState({
+                        chatHTML: chatContainer.innerHTML,
+                        model: modelSelect.value
+                    });
+                }
 
                 document.getElementById('settings-btn').onclick = () => {
                     settingsPanel.classList.toggle('hidden');
@@ -359,25 +428,23 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                 document.getElementById('manager-btn').onclick = () => vscode.postMessage({ type: 'openManager' });
                 document.getElementById('manager-link').onclick = (e) => { e.preventDefault(); vscode.postMessage({ type: 'openManager' }); };
                 document.getElementById('ghost-btn').onclick = () => vscode.postMessage({ type: 'ghost' });
-                document.getElementById('zen-btn').onclick = () => vscode.postMessage({ type: 'zen' });
                 document.getElementById('send-btn').onclick = () => send();
-
-                function saveKey() {
-                    const provider = document.getElementById('model-select').value;
-                    const key = document.getElementById('api-key').value;
-                    vscode.postMessage({ type: 'saveKey', provider, key });
-                    settingsPanel.classList.add('hidden');
-                    document.getElementById('api-key').value = '';
-                }
 
                 function send() {
                     const textarea = document.getElementById('prompt');
                     const text = textarea.value.trim();
                     if (!text) return;
-                    const provider = document.getElementById('model-select').value;
+
+                    const provider = modelSelect.value;
+                    if (!provider || provider === 'undefined') {
+                        appendMsg('❌ Error: Selecciona un modelo antes de preguntar.', 'ai');
+                        return;
+                    }
+
                     appendMsg(text, 'user');
                     vscode.postMessage({ type: 'askAI', provider, text });
                     textarea.value = '';
+                    saveState();
                 }
 
                 function appendMsg(text, role, id = null) {
@@ -387,11 +454,8 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     div.innerText = text;
                     chatContainer.appendChild(div);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
+                    saveState();
                 }
-
-                function ghost() { vscode.postMessage({ type: 'ghost' }); }
-                function toggleZen() { vscode.postMessage({ type: 'zen' }); }
-                function openManager() { vscode.postMessage({ type: 'openManager' }); }
 
                 window.addEventListener('message', event => {
                     const data = event.data;
@@ -410,19 +474,29 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                         appendMsg('❌ Error: ' + data.text, 'ai');
                     }
                     if(data.type === 'updateModels') {
-                        const select = document.getElementById('model-select');
+                        const select = modelSelect;
+                        const oldVal = select.value;
                         select.innerHTML = '';
-                        data.models.forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = m.id;
-                            opt.innerText = m.label;
-                            select.appendChild(opt);
-                        });
+
                         if (data.models.length === 0) {
                             const opt = document.createElement('option');
-                            opt.innerText = '⚠️ Sin llaves';
+                            opt.innerText = '⚠️ Configura tus llaves';
                             select.appendChild(opt);
+                        } else {
+                            data.models.forEach(m => {
+                                const opt = document.createElement('option');
+                                opt.value = m.id;
+                                opt.innerText = m.label;
+                                select.appendChild(opt);
+                            });
+                            // Restaurar el valor previo si sigue existiendo
+                            if (oldVal) select.value = oldVal;
+                            // Si después de restaurar sigue sin valor (ej: era el primero), forzar el primero
+                            if (!select.value && select.options.length > 0) {
+                                select.selectedIndex = 0;
+                            }
                         }
+                        saveState();
                     }
                 });
 
@@ -432,17 +506,10 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                         send();
                     }
                 });
+
+                modelSelect.addEventListener('change', () => saveState());
             </script>
         </body>
         </html>`;
     }
-}
-
-function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
 }

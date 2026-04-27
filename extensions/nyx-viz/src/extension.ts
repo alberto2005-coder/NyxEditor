@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
     // El "Puente": Permitir que nyx-ai pida datos del proyecto
     context.subscriptions.push(
         vscode.commands.registerCommand('nyx-viz.getProjectData', async () => {
-            return await (ProjectDashboardProvider as any)._gatherProjectData();
+            return await (dashboardProvider as any)._gatherProjectData();
         })
     );
 }
