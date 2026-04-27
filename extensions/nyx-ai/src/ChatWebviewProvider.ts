@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ZenAudioService } from './ZenAudioService';
 
 export class ChatWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'nyxeditor-chat-view';
@@ -148,8 +149,15 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                 case 'ghost':
                     vscode.commands.executeCommand('nyx-ai.createGhostSandbox');
                     break;
-                case 'zen':
-                    vscode.commands.executeCommand('nyx-ai.toggleZenAudio');
+                case 'zenMode':
+                    if (data.mode) {
+                        ZenAudioService.play(data.mode);
+                    } else {
+                        ZenAudioService.stop();
+                    }
+                    break;
+                case 'stopZen':
+                    ZenAudioService.stop();
                     break;
                 case 'openManager':
                     vscode.commands.executeCommand('nyx-ai.openManager');
@@ -299,11 +307,25 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     transition: background 0.2s;
                 }
                 .secondary-btn:hover { background: var(--glass-border); }
-                .hidden { display: none; }
+                                .hidden { display: none; }
+                .zen-controls {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 12px;
+                }
             </style>
         </head>
         <body>
             <div class="main-container">
+                <div class="zen-controls">
+                    <select id="zen-mode" onchange="vscode.postMessage({ command: 'zenMode', mode: this.value })">
+                        <option value="">Modo Zen: Off</option>
+                        <option value="rain">🌧️ Lluvia</option>
+                        <option value="forest">🌲 Bosque</option>
+                        <option value="lofi">☕ Lo-Fi</option>
+                    </select>
+                    <button id="stop-zen" onclick="vscode.postMessage({ command: 'stopZen' })" title="Detener Sonido">🔇</button>
+                </div>
                 <div class="header">
                     <select id="model-select">
                         <option value="gemini-pro">Gemini 1.5 Pro</option>
