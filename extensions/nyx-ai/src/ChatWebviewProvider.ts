@@ -50,18 +50,28 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     // Enviar estado de "pensando"
                     webviewView.webview.postMessage({ type: 'addResponse', text: '...', isThinking: true });
 
-                    // Obtener contexto del espacio de trabajo
+                    // Obtener contexto básico del workspace
                     let workspaceContext = "";
                     const workspaceFolders = vscode.workspace.workspaceFolders;
                     if (workspaceFolders) {
-                        workspaceContext += `Carpeta abierta: ${workspaceFolders[0].name}\nArchivos en la raíz:\n`;
-                        const files = await vscode.workspace.fs.readDirectory(workspaceFolders[0].uri);
-                        workspaceContext += files.map(f => `- ${f[0]}`).join('\n') + "\n\n";
+                        workspaceContext += `Carpeta abierta: ${workspaceFolders[0].name}\n`;
+                    }
+
+                    // PEDIR DATOS AL DASHBOARD (nyx-viz)
+                    try {
+                        const vizData: any = await vscode.commands.executeCommand('nyx-viz.getProjectData');
+                        if (vizData) {
+                            workspaceContext += `\nMAPA DE DEPENDENCIAS:\n${vizData.edges.map((e:any) => `${e.from} -> ${e.to}`).join('\n')}\n`;
+                            workspaceContext += `\nTAREAS DETECTADAS (TODO/BUG):\n${vizData.tasks.map((t:any) => `- [${t.type}] ${t.text} (${t.file})`).join('\n')}\n`;
+                            workspaceContext += `\nZONAS CALIENTES (GIT):\n${vizData.hotZones.map((h:any) => `- ${h.file} (${h.commits} commits recientes)`).join('\n')}\n`;
+                        }
+                    } catch (e) {
+                        // Si nyx-viz no está instalada o falla, seguimos con contexto básico
                     }
 
                     const activeEditor = vscode.window.activeTextEditor;
                     if (activeEditor) {
-                        workspaceContext += `ARCHIVO ACTUAL (${activeEditor.document.fileName}):\n\`\`\`\n${activeEditor.document.getText()}\n\`\`\`\n`;
+                        workspaceContext += `\nARCHIVO ACTUAL (${activeEditor.document.fileName}):\n\`\`\`\n${activeEditor.document.getText()}\n\`\`\`\n`;
                     }
 
                     // Enviar estado de "pensando"

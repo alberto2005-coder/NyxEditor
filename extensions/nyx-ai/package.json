@@ -4,6 +4,7 @@
 	"description": "Panel de IA unificado para NyxEditor",
 	"version": "1.0.0",
 	"publisher": "nyxeditor",
+    "icon": "media/icon.png",
 	"engines": {
 		"vscode": "^1.118.0"
 	},
@@ -15,7 +16,7 @@
 				{
 					"id": "nyx-ai-explorer",
 					"title": "Nyx IA",
-					"icon": "$(sparkle)"
+					"icon": "media/icon.svg"
 				}
 			]
 		},
@@ -24,7 +25,8 @@
 				{
 					"type": "webview",
 					"id": "nyxeditor-chat-view",
-					"name": "Chat de NyxEditor"
+					"name": "Chat de NyxEditor",
+                    "icon": "media/icon.svg"
 				}
 			]
 		}

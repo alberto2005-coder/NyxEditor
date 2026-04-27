@@ -1,0 +1,49 @@
+{
+    "name": "nyx-viz",
+    "displayName": "Nyx Visualization",
+    "description": "Dashboard de inteligencia y visualización para NyxEditor",
+    "version": "1.0.0",
+    "publisher": "nyx",
+    "icon": "media/icon.png",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Visualization"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "nyx-viz-explorer",
+                    "title": "Nyx Viz",
+                    "icon": "media/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "nyx-viz-explorer": [
+                {
+                    "type": "webview",
+                    "id": "nyx-project-dashboard",
+                    "name": "Dashboard del Proyecto",
+                    "icon": "media/icon.svg"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "nyx-viz.openDashboard",
+                "title": "Nyx Dashboard: Centro de Mando",
+                "category": "Nyx Viz"
+            }
+        ]
+    },
+    "devDependencies": {
+        "@types/node": "^20.x",
+        "@types/vscode": "^1.90.0",
+        "typescript": "^5.4.5"
+    }
+}

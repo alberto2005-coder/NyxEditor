@@ -248,6 +248,11 @@
 			"name": "nyx-ai",
 			"version": "1.0.0",
 			"path": "extensions/nyx-ai"
+		},
+		{
+			"name": "nyx-viz",
+			"version": "1.0.0",
+			"path": "extensions/nyx-viz"
 		}
 	]
 }

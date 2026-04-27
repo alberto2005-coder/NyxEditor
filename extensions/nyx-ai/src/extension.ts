@@ -19,7 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('nyx-ai.refreshModels', async () => {
             const providers = ['groq', 'gemini-pro', 'claude-3-5', 'gpt-4o'];
             const availableModels: {id: string, label: string}[] = [];
-            
+
             for (const p of providers) {
                 const key = await context.secrets.get(p);
                 if (key) {
@@ -73,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const uri = vscode.Uri.parse('ghost:/sandbox.js');
 		const content = Buffer.from('// Nyx Ghost Sandbox\n// Este archivo no existe en el disco.\nconsole.log("Hola desde el limbo!");\n');
 		ghostFS.writeFile(uri, content, { create: true, overwrite: true });
-		
+
 		const doc = await vscode.workspace.openTextDocument(uri);
 		await vscode.window.showTextDocument(doc, { preview: false });
 		vscode.window.showInformationMessage('Ghost Sandbox generado. Puedes probar código aquí sin miedo.');
