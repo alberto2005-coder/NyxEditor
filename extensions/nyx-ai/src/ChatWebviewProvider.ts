@@ -28,7 +28,16 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+        // Preparar URIs de audio local
+        const rainUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'rain.mp3'));
+        const forestUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'forest.mp3'));
+        const lofiUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'lofi..mp3'));
+
+        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, {
+            rain: rainUri.toString(),
+            forest: forestUri.toString(),
+            lofi: lofiUri.toString()
+        });
 
         // Escuchar mensajes del Panel (Frontend)
         webviewView.webview.onDidReceiveMessage(async (data: any) => {
@@ -39,8 +48,11 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     vscode.window.showInformationMessage(`Llave de ${data.provider} guardada en NyxEditor`);
                     break;
                 case 'askAI':
-                    // Extraer el nombre del proveedor (ej: de 'groq:llama' a 'groq')
-                    const providerId = data.provider.includes(':') ? data.provider.split(':')[0] : data.provider;
+                    // Mapeo inteligente de modelos a proveedores de llaves
+                    let providerId = data.provider.includes(':') ? data.provider.split(':')[0] : data.provider;
+                    if (providerId === 'gemini-pro') providerId = 'google';
+                    if (providerId === 'gpt-4o') providerId = 'openai';
+                    
                     const key = await this._context.secrets.get(providerId);
                     
                     if (!key) {
@@ -149,16 +161,6 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                 case 'ghost':
                     vscode.commands.executeCommand('nyx-ai.createGhostSandbox');
                     break;
-                case 'zenMode':
-                    if (data.mode) {
-                        ZenAudioService.play(data.mode);
-                    } else {
-                        ZenAudioService.stop();
-                    }
-                    break;
-                case 'stopZen':
-                    ZenAudioService.stop();
-                    break;
                 case 'openManager':
                     vscode.commands.executeCommand('nyx-ai.openManager');
                     break;
@@ -166,7 +168,15 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview) {
+    private _getHtmlForWebview(webview: vscode.Webview, audioUris: any = {}) {
+        const getNonce = () => {
+            let text = '';
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            for (let i = 0; i < 32; i++) {
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return text;
+        };
         const nonce = getNonce();
 
         return `
@@ -302,30 +312,14 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     flex: 1;
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 4px;
-                    transition: background 0.2s;
                 }
-                .secondary-btn:hover { background: var(--glass-border); }
-                                .hidden { display: none; }
-                .zen-controls {
-                    display: flex;
-                    gap: 8px;
-                    margin-bottom: 12px;
-                }
+                button { cursor: pointer; }
+                button:hover { background: #30363d; }
+                .hidden { display: none; }
             </style>
         </head>
         <body>
             <div class="main-container">
-                <div class="zen-controls">
-                    <select id="zen-mode" onchange="vscode.postMessage({ command: 'zenMode', mode: this.value })">
-                        <option value="">Modo Zen: Off</option>
-                        <option value="rain">🌧️ Lluvia</option>
-                        <option value="forest">🌲 Bosque</option>
-                        <option value="lofi">☕ Lo-Fi</option>
-                    </select>
-                    <button id="stop-zen" onclick="vscode.postMessage({ command: 'stopZen' })" title="Detener Sonido">🔇</button>
-                </div>
                 <div class="header">
                     <select id="model-select">
                         <option value="gemini-pro">Gemini 1.5 Pro</option>

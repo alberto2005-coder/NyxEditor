@@ -32,6 +32,18 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
         };
         const data = await this._gatherProjectData();
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, data);
+
+        // Escuchar clics en el mapa
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'openFile') {
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (workspaceFolders) {
+                    const fullPath = path.join(workspaceFolders[0].uri.fsPath, message.path);
+                    const doc = await vscode.workspace.openTextDocument(fullPath);
+                    await vscode.window.showTextDocument(doc);
+                }
+            }
+        });
     }
 
     private async _gatherProjectData() {
@@ -45,14 +57,23 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
         const hotZones: any[] = [];
 
         try {
-            const files = await vscode.workspace.findFiles('**/*.{ts,js,tsx,jsx}', '**/node_modules/**');
+            // Radar Maestro: Ignora basura de casi cualquier lenguaje y framework
+            const excludePattern = '{**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/build/**,**/.next/**,**/.vscode/**,**/.dart_tool/**,**/target/**,**/__pycache__/**,**/.venv/**,**/ios/Pods/**,**/.cache/**}';
+            const files = await vscode.workspace.findFiles('**/*.{ts,js,tsx,jsx,py,dart,rs,go,c,cpp,h,java,php,rb,lua,swift,kt}', excludePattern);
             
             // LÍMITE DE SEGURIDAD: Solo graficar los primeros 100 archivos para evitar cuelgues
             // Pero seguimos buscando TAREAS en todos.
             const graphLimit = 100;
             let graphCount = 0;
+            let totalCount = 0;
 
             for (const file of files) {
+                // Pausa de cortesía cada 100 archivos para no congelar el editor
+                if (totalCount % 100 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                }
+                totalCount++;
+
                 const relPath = vscode.workspace.asRelativePath(file);
                 
                 if (graphCount < graphLimit) {
@@ -67,9 +88,15 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
                         const importRegex = /import.*?from\s+['"](.*?)['"]|require\(['"](.*?)['"]\)/g;
                         let match;
                         while ((match = importRegex.exec(content)) !== null) {
-                            const target = match[1] || match[2];
-                            if (target && !target.startsWith('.')) continue;
-                            edges.push({ from: relPath, to: target });
+                            let target = match[1] || match[2];
+                            if (target) {
+                                if (target.startsWith('.')) {
+                                    const dir = path.dirname(relPath);
+                                    target = path.join(dir, target).replace(/\\/g, '/');
+                                    if (!target.includes('.')) target += '.ts'; 
+                                }
+                                edges.push({ from: relPath, to: target });
+                            }
                         }
                     }
 
@@ -165,8 +192,16 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
                         physics: { stabilization: true }
                     };
                     try {
-                        new vis.Network(container, visData, options);
-                        document.getElementById('debug-info').style.display = 'none'; // Ocultar debug si todo va bien
+                        const network = new vis.Network(container, visData, options);
+                        document.getElementById('debug-info').style.display = 'none';
+
+                        // HACER QUE EL MAPA SEA INTERACTIVO: Abrir archivo al hacer clic
+                        network.on("click", function (params) {
+                            if (params.nodes.length > 0) {
+                                const nodeId = params.nodes[0];
+                                vscode.postMessage({ command: 'openFile', path: nodeId });
+                            }
+                        });
                     } catch (e) {
                         document.getElementById('debug-info').innerHTML += '<br>Error VisNetwork: ' + e.message;
                     }
