@@ -38,9 +38,12 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     vscode.window.showInformationMessage(`Llave de ${data.provider} guardada en NyxEditor`);
                     break;
                 case 'askAI':
-                    const key = await this._context.secrets.get(data.provider);
+                    // Extraer el nombre del proveedor (ej: de 'groq:llama' a 'groq')
+                    const providerId = data.provider.includes(':') ? data.provider.split(':')[0] : data.provider;
+                    const key = await this._context.secrets.get(providerId);
+                    
                     if (!key) {
-                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${data.provider} en el Nyx Manager.` });
+                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${providerId} en el Nyx Manager.` });
                         return;
                     }
 

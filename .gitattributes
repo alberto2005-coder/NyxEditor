@@ -1,11 +1,25 @@
-* text=auto
+# .gitattributes configuration file
+# Purpose: Configure Git's line ending and language detection behavior
+# for NyxEditor project files
 
+* text=auto  # Normalize line endings for all text files
+
+# Windows-specific line endings for these binary/text files
+# (Windows requires CRLF for proper display)
 LICENSE.txt eol=crlf
 ThirdPartyNotices.txt eol=crlf
 
+# Script file line endings - Windows vs Unix
+# Windows scripts use CRLF, Unix scripts use LF
 *.bat eol=crlf
 *.cmd eol=crlf
 *.ps1 eol=lf
 *.sh eol=lf
+
+# Special handling for RTF files
+# -text flag: treat as binary stream (no EOL conversion)
 *.rtf -text
+
+# JSON file language detection
+# Tell GitHub to treat .json files as JSONC (JSON with comments)
 **/*.json linguist-language=jsonc
