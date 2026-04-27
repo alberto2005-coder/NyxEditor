@@ -253,6 +253,11 @@
 			"name": "nyx-viz",
 			"version": "1.0.0",
 			"path": "extensions/nyx-viz"
+		},
+		{
+			"name": "nyx-net",
+			"version": "1.0.0",
+			"path": "extensions/nyx-net"
 		}
 	]
 }
