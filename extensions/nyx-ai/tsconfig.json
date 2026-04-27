@@ -1,25 +1,24 @@
 {
+    "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "module": "CommonJS",
-        "target": "ES2022",
+        "module": "commonjs",
+        "target": "ES2020",
         "outDir": "out",
         "lib": [
-            "ES2022"
+            "ES2020",
+            "dom"
         ],
         "sourceMap": true,
         "rootDir": "src",
         "strict": false,
         "esModuleInterop": true,
-        "baseUrl": ".",
-        "paths": {
-            "vscode": [
-                "../../src/vscode-dts/vscode.d.ts"
-            ]
-        },
-        "types": [
-            "node"
-        ]
+        "skipLibCheck": true,
+        "types": ["node"]
     },
+    "include": [
+        "src/**/*",
+        "../../src/vscode-dts/vscode.d.ts"
+    ],
     "exclude": [
         "node_modules",
         ".vscode-test"

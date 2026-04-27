@@ -4,7 +4,6 @@ import { execSync } from 'child_process';
 
 export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'nyx-project-dashboard';
-    private _view?: vscode.WebviewView;
 
     constructor(private readonly _extensionUri: vscode.Uri) { }
 
@@ -25,7 +24,6 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
     }
 
     public async resolveWebviewView(webviewView: vscode.WebviewView) {
-        this._view = webviewView;
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
@@ -84,18 +82,24 @@ export class ProjectDashboardProvider implements vscode.WebviewViewProvider {
                 try {
                     const content = Buffer.from(await vscode.workspace.fs.readFile(file)).toString();
                     
-                    if (graphCount <= graphLimit) {
-                        const importRegex = /import.*?from\s+['"](.*?)['"]|require\(['"](.*?)['"]\)/g;
-                        let match;
-                        while ((match = importRegex.exec(content)) !== null) {
-                            let target = match[1] || match[2];
-                            if (target) {
-                                if (target.startsWith('.')) {
-                                    const dir = path.dirname(relPath);
-                                    target = path.join(dir, target).replace(/\\/g, '/');
-                                    if (!target.includes('.')) target += '.ts'; 
-                                }
-                                edges.push({ from: relPath, to: target });
+                    // Extraer imports/requires para crear líneas
+                    const importRegex = /import.*?from\s+['"](.*?)['"]|require\(['"](.*?)['"]\)/g;
+                    let match;
+                    while ((match = importRegex.exec(content)) !== null) {
+                        let target = match[1] || match[2];
+                        if (target && target.startsWith('.')) {
+                            const dir = path.dirname(relPath);
+                            const possiblePath = path.join(dir, target).replace(/\\/g, '/');
+                            
+                            // Intentar encontrar el nodo que más se parezca
+                            const foundNode = nodes.find(n => n.id.startsWith(possiblePath));
+                            if (foundNode) {
+                                edges.push({ 
+                                    from: relPath, 
+                                    to: foundNode.id,
+                                    arrows: 'to',
+                                    color: { opacity: 0.4 }
+                                });
                             }
                         }
                     }
