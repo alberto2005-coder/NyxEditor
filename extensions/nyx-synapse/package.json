@@ -1,0 +1,55 @@
+{
+    "name": "nyx-synapse",
+    "displayName": "Nyx Synapse",
+    "description": "Automatización de flujos de trabajo y orquestación de terminales",
+    "version": "1.0.0",
+    "publisher": "nyx",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "Nyx Synapse",
+            "properties": {
+                "nyx-synapse.recipes": {
+                    "type": "object",
+                    "description": "Definición de grupos de terminales y comandos",
+                    "default": {
+                        "MERN Stack": [
+                            { "name": "Database", "command": "echo 'Iniciando Mongo...'", "split": "vertical" },
+                            { "name": "Backend", "command": "echo 'Iniciando Express...'", "split": "horizontal" },
+                            { "name": "Frontend", "command": "echo 'Iniciando React...'", "split": "horizontal" }
+                        ]
+                    }
+                },
+                "nyx-synapse.autoLaunch": {
+                    "type": "string",
+                    "description": "Receta a lanzar automáticamente al iniciar NyxEditor",
+                    "default": "none"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "nyx-synapse.launchRecipe",
+                "title": "Nyx Synapse: Lanzar Receta"
+            }
+        ]
+    },
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^16.11.7",
+        "@types/vscode": "1.75.0",
+        "typescript": "^4.9.4"
+    }
+}
