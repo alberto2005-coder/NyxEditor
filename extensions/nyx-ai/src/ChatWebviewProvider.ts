@@ -4,11 +4,11 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'nyxeditor-chat-view';
     private _view?: vscode.WebviewView;
     private _tokenMeter?: vscode.StatusBarItem;
-    private _availableModels: string[] = [];
+    private _availableModels: {id: string, label: string}[] = [];
 
     constructor(private readonly _extensionUri: vscode.Uri, private readonly _context: vscode.ExtensionContext) { }
 
-    public async updateAvailableModels(models: string[]) {
+    public async updateAvailableModels(models: {id: string, label: string}[]) {
         this._availableModels = models;
         if (this._view) {
             this._view.webview.postMessage({ type: 'updateModels', models });
@@ -40,16 +40,97 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                 case 'askAI':
                     const key = await this._context.secrets.get(data.provider);
                     if (!key) {
-                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${data.provider}` });
+                        webviewView.webview.postMessage({ type: 'error', text: `Falta la API Key de ${data.provider} en el Nyx Manager.` });
                         return;
                     }
-                    // Aquí iría la llamada real a la API (fetch)
-                    const simulatedTokens = Math.floor(Math.random() * 500) + 100;
-                    if (this._tokenMeter) {
-                        this._tokenMeter.text = `$(pulse) Nyx AI: ${simulatedTokens} tokens`;
-                        this._tokenMeter.backgroundColor = simulatedTokens > 400 ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
+
+                    // Enviar estado de "pensando"
+                    webviewView.webview.postMessage({ type: 'addResponse', text: '...', isThinking: true });
+
+                    // Obtener contexto del espacio de trabajo
+                    let workspaceContext = "";
+                    const workspaceFolders = vscode.workspace.workspaceFolders;
+                    if (workspaceFolders) {
+                        workspaceContext += `Carpeta abierta: ${workspaceFolders[0].name}\nArchivos en la raíz:\n`;
+                        const files = await vscode.workspace.fs.readDirectory(workspaceFolders[0].uri);
+                        workspaceContext += files.map(f => `- ${f[0]}`).join('\n') + "\n\n";
                     }
-                    webviewView.webview.postMessage({ type: 'addResponse', text: `Respuesta simulada de ${data.provider} (Cerebro en construcción...)` });
+
+                    const activeEditor = vscode.window.activeTextEditor;
+                    if (activeEditor) {
+                        workspaceContext += `ARCHIVO ACTUAL (${activeEditor.document.fileName}):\n\`\`\`\n${activeEditor.document.getText()}\n\`\`\`\n`;
+                    }
+
+                    // Enviar estado de "pensando"
+                    webviewView.webview.postMessage({ type: 'addResponse', text: '...', isThinking: true });
+
+                    try {
+                        let responseText = "";
+                        const fullPrompt = `CONTEXTO DEL PROYECTO:\n${workspaceContext}\n\nPREGUNTA DEL USUARIO: ${data.text}\n\nINSTRUCCIONES: Si quieres editar o crear un archivo, usa el formato: [WRITE_FILE: ruta/del/archivo] ...contenido... [/WRITE_FILE]`;
+                        
+                        if (data.provider.startsWith('groq:')) {
+                            const modelId = data.provider.split(':')[1];
+                            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${key}`
+                                },
+                                body: JSON.stringify({
+                                    model: modelId,
+                                    messages: [
+                                        { role: 'system', content: 'Eres Nyx, un asistente experto en programación integrado en NyxEditor. Puedes ver y editar archivos del proyecto.' },
+                                        { role: 'user', content: fullPrompt }
+                                    ],
+                                    stream: false
+                                })
+                            });
+                            const result: any = await response.json();
+                            responseText = result.choices?.[0]?.message?.content || "Error en la respuesta.";
+                        } 
+                        else if (data.provider === 'gemini-pro') {
+                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    contents: [{ parts: [{ text: fullPrompt }] }]
+                                })
+                            });
+                            const result: any = await response.json();
+                            responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Error en la respuesta.";
+                        }
+
+                        // Lógica de edición de archivos (Escribir en disco)
+                        const writeFileRegex = /\[WRITE_FILE: (.*?)\]([\s\S]*?)\[\/WRITE_FILE\]/g;
+                        let match;
+                        while ((match = writeFileRegex.exec(responseText)) !== null) {
+                            const filePath = match[1];
+                            const content = match[2].trim();
+                            
+                            try {
+                                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                                if (workspaceFolder) {
+                                    const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+                                    await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content));
+                                    vscode.window.showInformationMessage(`Nyx ha editado: ${filePath}`);
+                                }
+                            } catch (e: any) {
+                                vscode.window.showErrorMessage(`Error al escribir archivo: ${e.message}`);
+                            }
+                        }
+
+                        // Actualizar medidor de tokens (estimado)
+                        const simulatedTokens = Math.floor(fullPrompt.length / 4) + Math.floor(responseText.length / 4);
+                        if (this._tokenMeter) {
+                            this._tokenMeter.text = `$(pulse) Nyx AI: ${simulatedTokens} tokens`;
+                            this._tokenMeter.backgroundColor = simulatedTokens > 1000 ? new vscode.ThemeColor('statusBarItem.errorBackground') : undefined;
+                        }
+
+                        webviewView.webview.postMessage({ type: 'addResponse', text: responseText, isThinking: false });
+
+                    } catch (error: any) {
+                        webviewView.webview.postMessage({ type: 'error', text: `Error de conexión: ${error.message}` });
+                    }
                     break;
                 case 'ghost':
                     vscode.commands.executeCommand('nyx-ai.createGhostSandbox');
@@ -218,21 +299,21 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                         <option value="gpt-4o">GPT-4o</option>
                     </select>
                     <button id="settings-btn" class="settings-btn" title="Configuración">⚙</button>
-                    <button class="settings-btn" onclick="openManager()" title="Nyx Manager">🏠</button>
+                    <button id="manager-btn" class="settings-btn" title="Nyx Manager">🏠</button>
                 </div>
 
                 <div id="settings" class="settings-panel glass-panel hidden">
-                    <p style="font-size: 10px; margin: 0;">Gestiona tus llaves en el <a href="#" onclick="openManager()">Nyx Manager</a></p>
+                    <p style="font-size: 10px; margin: 0;">Gestiona tus llaves en el <a id="manager-link" href="#">Nyx Manager</a></p>
                 </div>
 
                 <div id="chat-container"></div>
 
                 <div class="input-section">
                     <textarea id="prompt" placeholder="Pregunta algo a NyxEditor..."></textarea>
-                    <button class="primary-btn" onclick="send()">Enviar Mensaje</button>
+                    <button id="send-btn" class="primary-btn">Enviar Mensaje</button>
                     <div style="display: flex; gap: 8px;">
-                        <button class="secondary-btn" onclick="ghost()">👻 Sandbox</button>
-                        <button class="secondary-btn" onclick="toggleZen()">🎵 Zen Audio</button>
+                        <button id="ghost-btn" class="secondary-btn">👻 Sandbox</button>
+                        <button id="zen-btn" class="secondary-btn">🎵 Zen Audio</button>
                     </div>
                 </div>
             </div>
@@ -245,6 +326,12 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                 document.getElementById('settings-btn').onclick = () => {
                     settingsPanel.classList.toggle('hidden');
                 };
+
+                document.getElementById('manager-btn').onclick = () => vscode.postMessage({ type: 'openManager' });
+                document.getElementById('manager-link').onclick = (e) => { e.preventDefault(); vscode.postMessage({ type: 'openManager' }); };
+                document.getElementById('ghost-btn').onclick = () => vscode.postMessage({ type: 'ghost' });
+                document.getElementById('zen-btn').onclick = () => vscode.postMessage({ type: 'zen' });
+                document.getElementById('send-btn').onclick = () => send();
 
                 function saveKey() {
                     const provider = document.getElementById('model-select').value;
@@ -264,9 +351,10 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                     textarea.value = '';
                 }
 
-                function appendMsg(text, role) {
+                function appendMsg(text, role, id = null) {
                     const div = document.createElement('div');
                     div.className = 'msg ' + role;
+                    if (id) div.id = id;
                     div.innerText = text;
                     chatContainer.appendChild(div);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -278,21 +366,27 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
 
                 window.addEventListener('message', event => {
                     const data = event.data;
-                    if(data.type === 'addResponse') appendMsg(data.text, 'ai');
-                    if(data.type === 'error') appendMsg('❌ Error: ' + data.text, 'ai');
+                    if(data.type === 'addResponse') {
+                        if (data.isThinking) {
+                            appendMsg('...', 'ai', 'thinking-msg');
+                        } else {
+                            const thinking = document.getElementById('thinking-msg');
+                            if (thinking) thinking.remove();
+                            appendMsg(data.text, 'ai');
+                        }
+                    }
+                    if(data.type === 'error') {
+                        const thinking = document.getElementById('thinking-msg');
+                        if (thinking) thinking.remove();
+                        appendMsg('❌ Error: ' + data.text, 'ai');
+                    }
                     if(data.type === 'updateModels') {
                         const select = document.getElementById('model-select');
-                        const models = {
-                            'gemini-pro': 'Gemini 1.5 Pro',
-                            'claude-3-5': 'Claude 3.5 Sonnet',
-                            'grok-1': 'Grok-1 (𝕏)',
-                            'gpt-4o': 'GPT-4o'
-                        };
                         select.innerHTML = '';
                         data.models.forEach(m => {
                             const opt = document.createElement('option');
-                            opt.value = m;
-                            opt.innerText = models[m] || m;
+                            opt.value = m.id;
+                            opt.innerText = m.label;
                             select.appendChild(opt);
                         });
                         if (data.models.length === 0) {

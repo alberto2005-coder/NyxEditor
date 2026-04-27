@@ -5,6 +5,8 @@ import { ZenAudioService } from './ZenAudioService';
 import { NyxManagerProvider } from './NyxManagerProvider';
 
 export function activate(context: vscode.ExtensionContext) {
+    const chatProvider = new ChatWebviewProvider(context.extensionUri, context);
+
 	// Registrar Nyx Manager
     context.subscriptions.push(
         vscode.commands.registerCommand('nyx-ai.openManager', () => {
@@ -15,19 +17,34 @@ export function activate(context: vscode.ExtensionContext) {
     // Refrescar modelos en el chat
     context.subscriptions.push(
         vscode.commands.registerCommand('nyx-ai.refreshModels', async () => {
-            if (chatProvider) {
-                const providers = ['gemini-pro', 'claude-3-5', 'grok-1', 'gpt-4o'];
-                const availableModels = [];
-                for (const p of providers) {
-                    const key = await context.secrets.get(p);
-                    if (key) availableModels.push(p);
+            const providers = ['groq', 'gemini-pro', 'claude-3-5', 'gpt-4o'];
+            const availableModels: {id: string, label: string}[] = [];
+            
+            for (const p of providers) {
+                const key = await context.secrets.get(p);
+                if (key) {
+                    if (p === 'groq') {
+                        try {
+                            const resp = await fetch('https://api.groq.com/openai/v1/models', {
+                                headers: { 'Authorization': `Bearer ${key}` }
+                            });
+                            const data: any = await resp.json();
+                            if (data.data) {
+                                data.data.forEach((m: any) => {
+                                    availableModels.push({ id: `groq:${m.id}`, label: `Groq: ${m.id}` });
+                                });
+                            }
+                        } catch (e) {
+                            availableModels.push({ id: 'groq:llama-3.3-70b-versatile', label: 'Groq: Llama 3.3 (Backup)' });
+                        }
+                    } else {
+                        availableModels.push({ id: p, label: p.toUpperCase() });
+                    }
                 }
-                chatProvider.updateAvailableModels(availableModels);
             }
+            chatProvider.updateAvailableModels(availableModels);
         })
     );
-
-    const chatProvider = new ChatWebviewProvider(context.extensionUri, context);
 
 	// Token Meter Status Bar Item
 	const tokenMeter = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -42,10 +59,8 @@ export function activate(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
 			const text = editor.document.getText();
-			// Simulación de optimización: quitar comentarios (regex simple)
 			const optimized = text.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '');
 			vscode.window.showInformationMessage('Contexto optimizado: Comentarios eliminados para ahorrar tokens.');
-			// Aquí podrías reemplazar el texto o simplemente guardarlo para la siguiente petición
 		}
 	});
 	context.subscriptions.push(optimizeCmd);

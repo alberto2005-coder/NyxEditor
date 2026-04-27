@@ -98,6 +98,16 @@ export class NyxManagerProvider {
                     
                     <div class="provider-grid">
                         <div class="provider-item">
+                            <label>Groq (Ultra-Fast LPU)</label>
+                            <p style="font-size: 10px; margin: 0; opacity: 0.6;">Consigue tu llave en <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></p>
+                            <input type="password" id="groq-key" placeholder="Pega tu llave de groq.com aquí...">
+                            <div>
+                                <button onclick="save('groq', 'groq-key')">Guardar</button>
+                                <button class="delete-btn" onclick="del('groq')">Limpiar</button>
+                            </div>
+                        </div>
+
+                        <div class="provider-item">
                             <label>Google (Gemini)</label>
                             <input type="password" id="gemini-key" placeholder="Pega tu llave aquí...">
                             <div>
