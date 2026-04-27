@@ -42,6 +42,7 @@ if (process.env.npm_execpath?.includes('yarn')) {
 	throw new Error();
 }
 
+/*
 const npmUserAgent = process.env.npm_config_user_agent;
 const npmVersionMatch = npmUserAgent?.match(/npm\/(\d+)\.(\d+)\.(\d+)/);
 if (npmVersionMatch) {
@@ -52,6 +53,7 @@ if (npmVersionMatch) {
 		throw new Error();
 	}
 }
+*/
 
 // Fast path: if nothing changed since last successful install, skip everything.
 // This makes `npm i` near-instant when dependencies haven't changed.
@@ -79,7 +81,7 @@ if (process.arch !== os.arch()) {
 function hasSupportedVisualStudioVersion() {
 	// Translated over from
 	// https://source.chromium.org/chromium/chromium/src/+/master:build/vs_toolchain.py;l=140-175
-	const supportedVersions = ['2022', '2019'];
+	const supportedVersions = ['18', '2022', '2019'];
 
 	const availableVersions = [];
 	for (const version of supportedVersions) {

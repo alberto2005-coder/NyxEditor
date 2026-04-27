@@ -1,0 +1,32 @@
+{
+	"name": "nyx-ai",
+	"displayName": "Nyx IA Chat",
+	"description": "Panel de IA unificado para NyxEditor",
+	"version": "1.0.0",
+	"publisher": "nyxeditor",
+	"engines": {
+		"vscode": "^1.118.0"
+	},
+	"activationEvents": [],
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "nyx-ai-explorer",
+					"title": "Nyx IA",
+					"icon": "$(sparkle)"
+				}
+			]
+		},
+		"views": {
+			"nyx-ai-explorer": [
+				{
+					"type": "webview",
+					"id": "nyxeditor-chat-view",
+					"name": "Chat de NyxEditor"
+				}
+			]
+		}
+	}
+}

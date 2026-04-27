@@ -673,22 +673,32 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		this.trace('Lifecycle#relaunch()');
 
 		const args = process.argv.slice(1);
-		if (options?.addArgs) {
-			args.push(...options.addArgs);
-		}
+		if (this.environmentMainService.isBuilt) {
+			if (options?.addArgs) {
+				args.push(...options.addArgs);
+			}
 
-		if (options?.removeArgs) {
-			for (const a of options.removeArgs) {
-				const idx = args.indexOf(a);
-				if (idx >= 0) {
-					args.splice(idx, 1);
+			if (options?.removeArgs) {
+				for (const a of options.removeArgs) {
+					const idx = args.indexOf(a);
+					if (idx >= 0) {
+						args.splice(idx, 1);
+					}
 				}
+			}
+		} else {
+			// In development mode, we must ensure that the first argument
+			// is the path to the application root, otherwise Electron
+			// will not know where to find the app.
+			const appRoot = this.environmentMainService.appRoot;
+			if (args[0] !== appRoot && args[0] !== '.') {
+				args.unshift(appRoot);
 			}
 		}
 
 		const quitListener = () => {
 			if (!this.relaunchHandler?.handleRelaunch(options)) {
-				this.trace('Lifecycle#relaunch() - calling app.relaunch()');
+				this.trace(`Lifecycle#relaunch() - calling app.relaunch() with args: ${args.join(' ')}`);
 				electron.app.relaunch({ args });
 			}
 		};

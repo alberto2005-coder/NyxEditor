@@ -11,6 +11,10 @@ export function getNLSLanguage(): string | undefined {
 	return globalThis._VSCODE_NLS_LANGUAGE;
 }
 
+export function getNLSStrings(): Record<string, string> | undefined {
+	return (globalThis as any)._VSCODE_NLS_STRINGS;
+}
+
 declare const document: { location?: { hash?: string } } | undefined;
 const isPseudo = getNLSLanguage() === 'pseudo' || (typeof document !== 'undefined' && document.location && typeof document.location.hash === 'string' && document.location.hash.indexOf('pseudo=true') >= 0);
 
@@ -86,6 +90,10 @@ export function localize(data: ILocalizeInfo | string /* | number when built */,
 	if (typeof data === 'number') {
 		return _format(lookupMessage(data, message), args);
 	}
+	const nlsStrings = getNLSStrings();
+	if (nlsStrings && nlsStrings[message]) {
+		return _format(nlsStrings[message], args);
+	}
 	return _format(message, args);
 }
 
@@ -143,7 +151,12 @@ export function localize2(data: ILocalizeInfo | string /* | number when built */
 	if (typeof data === 'number') {
 		message = lookupMessage(data, originalMessage);
 	} else {
-		message = originalMessage;
+		const nlsStrings = getNLSStrings();
+		if (nlsStrings && nlsStrings[originalMessage]) {
+			message = nlsStrings[originalMessage];
+		} else {
+			message = originalMessage;
+		}
 	}
 
 	const value = _format(message, args);

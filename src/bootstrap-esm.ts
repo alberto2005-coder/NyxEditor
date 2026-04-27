@@ -46,6 +46,14 @@ function setupNLS(): Promise<INLSConfiguration | undefined> {
 	return setupNLSResult;
 }
 
+function safeLog(fn: (msg: string) => void, message: string): void {
+	try {
+		fn(message);
+	} catch (e) {
+		// Ignore EPIPE or other logging errors
+	}
+}
+
 async function doSetupNLS(): Promise<INLSConfiguration | undefined> {
 	performance.mark('code/willLoadNls');
 
@@ -63,12 +71,11 @@ async function doSetupNLS(): Promise<INLSConfiguration | undefined> {
 
 			globalThis._VSCODE_NLS_LANGUAGE = nlsConfig?.resolvedLanguage;
 		} catch (e) {
-			console.error(`Error reading VSCODE_NLS_CONFIG from environment: ${e}`);
+			safeLog(console.error, `Error reading VSCODE_NLS_CONFIG from environment: ${e}`);
 		}
 	}
 
 	if (
-		process.env['VSCODE_DEV'] ||	// no NLS support in dev mode
 		!messagesFile					// no NLS messages file
 	) {
 		return undefined;
@@ -76,15 +83,19 @@ async function doSetupNLS(): Promise<INLSConfiguration | undefined> {
 
 	try {
 		globalThis._VSCODE_NLS_MESSAGES = JSON.parse((await fs.promises.readFile(messagesFile)).toString());
+
+		// NEW: also populate string mapping for development mode
+
+
 	} catch (error) {
-		console.error(`Error reading NLS messages file ${messagesFile}: ${error}`);
+		safeLog(console.error, `Error reading NLS messages file ${messagesFile}: ${error}`);
 
 		// Mark as corrupt: this will re-create the language pack cache next startup
 		if (nlsConfig?.languagePack?.corruptMarkerFile) {
 			try {
 				await fs.promises.writeFile(nlsConfig.languagePack.corruptMarkerFile, 'corrupted');
 			} catch (error) {
-				console.error(`Error writing corrupted NLS marker file: ${error}`);
+				safeLog(console.error, `Error writing corrupted NLS marker file: ${error}`);
 			}
 		}
 
@@ -93,7 +104,7 @@ async function doSetupNLS(): Promise<INLSConfiguration | undefined> {
 			try {
 				globalThis._VSCODE_NLS_MESSAGES = JSON.parse((await fs.promises.readFile(nlsConfig.defaultMessagesFile)).toString());
 			} catch (error) {
-				console.error(`Error reading default NLS messages file ${nlsConfig.defaultMessagesFile}: ${error}`);
+				safeLog(console.error, `Error reading default NLS messages file ${nlsConfig.defaultMessagesFile}: ${error}`);
 			}
 		}
 	}
