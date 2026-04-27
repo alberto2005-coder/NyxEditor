@@ -80,6 +80,7 @@ const vscodeResourceIncludes = [
 
 	// Touchbar
 	'out-build/vs/workbench/browser/parts/editor/media/*.png',
+	'out-build/vs/workbench/browser/media/*.{svg,png}',
 	'out-build/vs/workbench/contrib/debug/browser/media/*.png',
 
 	// External Terminal
@@ -652,7 +653,7 @@ function patchWin32DependenciesTask(destinationFolderName: string) {
 	return async () => {
 		const versionedResourcesFolder = util.getVersionedResourcesFolder('win32', commit!);
 		const deps = (await Promise.all([
-			glob('**/*.node', { cwd, ignore: 'extensions/node_modules/@parcel/watcher/**' }),
+			glob('**/*.node', { cwd, ignore: ['**/node_modules/@parcel/watcher/**', '**/prebuilds/linux-x64/**', '**/prebuilds/darwin-x64/**', '**/prebuilds/darwin-arm64/**'] }),
 			glob('**/rg.exe', { cwd }),
 			glob('**/*explorer_command*.dll', { cwd }),
 		])).flatMap(o => o);

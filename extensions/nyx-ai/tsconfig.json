@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "module": "CommonJS",
+        "target": "ES2022",
+        "outDir": "out",
+        "lib": [
+            "ES2022"
+        ],
+        "sourceMap": true,
+        "rootDir": "src",
+        "strict": false,
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "vscode": [
+                "../../src/vscode-dts/vscode.d.ts"
+            ]
+        },
+        "types": [
+            "node"
+        ]
+    },
+    "exclude": [
+        "node_modules",
+        ".vscode-test"
+    ]
+}
