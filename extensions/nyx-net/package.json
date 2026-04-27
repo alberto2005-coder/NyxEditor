@@ -1,0 +1,48 @@
+{
+    "name": "nyx-net",
+    "displayName": "Nyx Net Sentinel",
+    "description": "Detección automática de servidores y pruebas de API integradas",
+    "version": "1.0.0",
+    "publisher": "nyx",
+    "icon": "media/net-icon.png",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "nyx-network",
+                    "title": "Nyx Network",
+                    "icon": "media/net-icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "nyx-network": [
+                {
+                    "type": "webview",
+                    "id": "nyx-net-sentinel",
+                    "name": "Net Sentinel: Puertos Activos",
+                    "icon": "media/net-icon.svg"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^16.11.7",
+        "@types/vscode": "1.75.0",
+        "typescript": "^4.9.4"
+    }
+}
