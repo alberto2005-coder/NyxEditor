@@ -263,6 +263,11 @@
 			"name": "nyx-synapse",
 			"version": "1.0.0",
 			"path": "extensions/nyx-synapse"
+		},
+		{
+			"name": "copilot-chat",
+			"publisher": "GitHub",
+			"path": "extensions/copilot"
 		}
 	]
 }
