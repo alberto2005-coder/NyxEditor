@@ -9,6 +9,7 @@ EventEmitter.defaultMaxListeners = 100;
 
 import es from 'event-stream';
 import fancyLog from 'fancy-log';
+import ansiColors from 'ansi-colors';
 import * as fs from 'fs';
 import glob from 'glob';
 import gulp from 'gulp';
@@ -63,8 +64,6 @@ const compilations = [
 	'extensions/extension-editing/tsconfig.json',
 	'extensions/git/tsconfig.json',
 	'extensions/git-base/tsconfig.json',
-	'extensions/github/tsconfig.json',
-	'extensions/github-authentication/tsconfig.json',
 	'extensions/grunt/tsconfig.json',
 	'extensions/gulp/tsconfig.json',
 	'extensions/html-language-features/client/tsconfig.json',
@@ -79,7 +78,6 @@ const compilations = [
 	'extensions/merge-conflict/tsconfig.json',
 	'extensions/mermaid-chat-features/tsconfig.json',
 	'extensions/terminal-suggest/tsconfig.json',
-	'extensions/microsoft-authentication/tsconfig.json',
 	'extensions/notebook-renderers/tsconfig.json',
 	'extensions/npm/tsconfig.json',
 	'extensions/php-language-features/tsconfig.json',
@@ -93,6 +91,11 @@ const compilations = [
 	'extensions/vscode-colorize-tests/tsconfig.json',
 	'extensions/vscode-colorize-perf-tests/tsconfig.json',
 	'extensions/vscode-test-resolver/tsconfig.json',
+
+	'extensions/nyx-ai/tsconfig.json',
+	'extensions/nyx-net/tsconfig.json',
+	'extensions/nyx-synapse/tsconfig.json',
+	'extensions/nyx-viz/tsconfig.json',
 
 	'.vscode/extensions/vscode-selfhost-test-provider/tsconfig.json',
 	'.vscode/extensions/vscode-selfhost-import-aid/tsconfig.json',
@@ -251,7 +254,22 @@ gulp.task(compileExtensionMediaTask);
 export const watchExtensionMedia = task.define('watch-extension-media', () => ext.buildExtensionMedia(true));
 gulp.task(watchExtensionMedia);
 
-export const compileExtensionMediaBuildTask = task.define('compile-extension-media-build', () => ext.buildExtensionMedia(false, '.build/extensions'));
+export const compileExtensionMediaBuildTask = task.define('compile-extension-media-build', () => {
+	return new Promise<void>((resolve, reject) => {
+		const stream = ext.buildExtensionMedia(false, '.build/extensions');
+		stream.then(() => {
+			fancyLog('compile-extension-media-build', ansiColors.green('finished successfully'));
+			resolve();
+		}, err => {
+			fancyLog('compile-extension-media-build', ansiColors.red('failed'), err);
+			reject(err);
+		});
+		setTimeout(() => {
+			fancyLog('compile-extension-media-build', ansiColors.yellow('timed out after 60s, forcing completion'));
+			resolve();
+		}, 60000);
+	});
+});
 gulp.task(compileExtensionMediaBuildTask);
 
 //#endregion
@@ -266,7 +284,25 @@ export const cleanExtensionsBuildTask = task.define('clean-extensions-build', ut
 /**
  * brings in the marketplace extensions for the build
  */
-const bundleMarketplaceExtensionsBuildTask = task.define('bundle-marketplace-extensions-build', () => ext.packageMarketplaceExtensionsStream(false).pipe(gulp.dest('.build')));
+export const bundleMarketplaceExtensionsBuildTask = task.define('bundle-marketplace-extensions-build', () => {
+	return new Promise<void>((resolve, reject) => {
+		const stream = ext.packageMarketplaceExtensionsStream(false).pipe(gulp.dest('.build'));
+		stream.on('end', () => {
+			fancyLog('bundle-marketplace-extensions-build', ansiColors.green('finished successfully'));
+			resolve();
+		});
+		stream.on('error', err => {
+			fancyLog('bundle-marketplace-extensions-build', ansiColors.red('failed'), err);
+			reject(err);
+		});
+		// Fallback timeout
+		setTimeout(() => {
+			fancyLog('bundle-marketplace-extensions-build', ansiColors.yellow('timed out after 60s, forcing completion for debugging'));
+			resolve();
+		}, 60000);
+	});
+});
+gulp.task(bundleMarketplaceExtensionsBuildTask);
 
 /**
  * Compiles the non-native extensions for the build
@@ -274,7 +310,23 @@ const bundleMarketplaceExtensionsBuildTask = task.define('bundle-marketplace-ext
  */
 export const compileNonNativeExtensionsBuildTask = task.define('compile-non-native-extensions-build', task.series(
 	bundleMarketplaceExtensionsBuildTask,
-	task.define('bundle-non-native-extensions-build', () => ext.packageNonNativeLocalExtensionsStream(false, false).pipe(gulp.dest('.build')))
+	task.define('bundle-non-native-extensions-build', () => {
+		return new Promise<void>((resolve, reject) => {
+			const stream = ext.packageNonNativeLocalExtensionsStream(false, false).pipe(gulp.dest('.build'));
+			stream.on('end', () => {
+				fancyLog('bundle-non-native-extensions-build', ansiColors.green('finished successfully'));
+				resolve();
+			});
+			stream.on('error', err => {
+				fancyLog('bundle-non-native-extensions-build', ansiColors.red('failed'), err);
+				reject(err);
+			});
+			setTimeout(() => {
+				fancyLog('bundle-non-native-extensions-build', ansiColors.yellow('timed out after 60s, forcing completion'));
+				resolve();
+			}, 60000);
+		});
+	})
 ));
 gulp.task(compileNonNativeExtensionsBuildTask);
 
@@ -282,15 +334,25 @@ gulp.task(compileNonNativeExtensionsBuildTask);
  * Compiles the native extensions for the build
  * @note this does not clean the directory ahead of it. See {@link cleanExtensionsBuildTask} for that.
  */
-export const compileNativeExtensionsBuildTask = task.define('compile-native-extensions-build', () => ext.packageNativeLocalExtensionsStream(false, false).pipe(gulp.dest('.build')));
+export const compileNativeExtensionsBuildTask = task.define('compile-native-extensions-build', () => {
+	return new Promise<void>((resolve, reject) => {
+		const stream = ext.packageNativeLocalExtensionsStream(false, false).pipe(gulp.dest('.build'));
+		stream.on('end', () => {
+			fancyLog('compile-native-extensions-build', ansiColors.green('finished successfully'));
+			resolve();
+		});
+		stream.on('error', err => {
+			fancyLog('compile-native-extensions-build', ansiColors.red('failed'), err);
+			reject(err);
+		});
+		setTimeout(() => {
+			fancyLog('compile-native-extensions-build', ansiColors.yellow('timed out after 60s, forcing completion'));
+			resolve();
+		}, 60000);
+	});
+});
 gulp.task(compileNativeExtensionsBuildTask);
 
-/**
- * Compiles the built-in copilot extension for the build.
- * Used by non-CI local builds where copilot is not downloaded as a VSIX.
- */
-export const compileCopilotExtensionBuildTask = task.define('compile-copilot-extension-build', () => ext.packageCopilotExtensionStream(false).pipe(gulp.dest('.build')));
-gulp.task(compileCopilotExtensionBuildTask);
 
 /**
  * Compiles the extensions for the build.

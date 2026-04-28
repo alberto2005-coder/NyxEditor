@@ -29,9 +29,8 @@ import { config } from './lib/electron.ts';
 import { createAsar } from './lib/asar.ts';
 import minimist from 'minimist';
 import { compileBuildWithoutManglingTask, compileBuildWithManglingTask } from './gulpfile.compile.ts';
-import { compileNonNativeExtensionsBuildTask, compileNativeExtensionsBuildTask, compileAllExtensionsBuildTask, compileExtensionMediaBuildTask, cleanExtensionsBuildTask, compileCopilotExtensionBuildTask } from './gulpfile.extensions.ts';
+import { compileNonNativeExtensionsBuildTask, compileNativeExtensionsBuildTask, compileAllExtensionsBuildTask, compileExtensionMediaBuildTask, cleanExtensionsBuildTask } from './gulpfile.extensions.ts';
 import { copyCodiconsTask } from './lib/compilation.ts';
-import { getCopilotExcludeFilter, prepareBuiltInCopilotRipgrepShim } from './lib/copilot.ts';
 import type { EmbeddedProductInfo } from './lib/embeddedType.ts';
 import { useEsbuildTranspile } from './buildConfig.ts';
 import { promisify } from 'util';
@@ -338,7 +337,10 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			return !set.has(platform);
 		}).map(ext => `!.build/extensions/${ext.name}/**`);
 
-		const extensions = gulp.src(['.build/extensions/**', ...platformSpecificBuiltInExtensionsExclusions], { base: '.build', dot: true });
+		const extensions = es.merge(
+			gulp.src(['.build/extensions/**', ...platformSpecificBuiltInExtensionsExclusions], { base: '.build', dot: true }),
+			gulp.src(['extensions/nyx-*/**', '!extensions/nyx-*/src/**', '!extensions/nyx-*/.antigravityignore'], { base: '.', dot: true })
+		);
 
 		const sourceFilterPattern = stripSourceMapsInPackagingTasks
 			? ['**', '!**/*.{js,css}.map']
@@ -438,14 +440,12 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			.pipe(filter(depFilterPattern))
 			.pipe(util.cleanNodeModules(path.join(import.meta.dirname, '.moduleignore')))
 			.pipe(util.cleanNodeModules(path.join(import.meta.dirname, `.moduleignore.${process.platform}`)))
-			.pipe(filter(getCopilotExcludeFilter(platform, arch)))
 			.pipe(jsFilter)
 			.pipe(util.rewriteSourceMappingURL(sourceMappingURLBase))
 			.pipe(jsFilter.restore)
 			.pipe(createAsar(path.join(process.cwd(), 'node_modules'), [
 				'**/*.node',
 				'**/@vscode/ripgrep/bin/*',
-				'**/@github/copilot-*/**',
 				'**/node-pty/build/Release/*',
 				'**/node-pty/build/Release/conpty/*',
 				'**/node-pty/lib/worker/conoutSocketWorker.js',
@@ -514,7 +514,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			}
 		} else if (platform === 'linux') {
 			const policyDest = gulp.src('.build/policies/linux/**', { base: '.build/policies/linux' })
-				.pipe(rename(f => f.dirname = `policies/${f.dirname}`));
+				.pipe(rename(f => { f.dirname = `policies/${f.dirname}`; }));
 			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }), policyDest);
 		} else if (platform === 'darwin') {
 			const shortcut = gulp.src('resources/darwin/bin/code.sh')
@@ -522,7 +522,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				.pipe(replace('@@NAME@@', product.nameShort))
 				.pipe(rename('bin/code'));
 			const policyDest = gulp.src('.build/policies/darwin/**', { base: '.build/policies/darwin' })
-				.pipe(rename(f => f.dirname = `policies/${f.dirname}`));
+				.pipe(rename(f => { f.dirname = `policies/${f.dirname}`; }));
 			all = es.merge(all, shortcut, policyDest);
 		}
 
@@ -610,7 +610,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				.pipe(rename(product.nameShort + '.VisualElementsManifest.xml')));
 
 			result = es.merge(result, gulp.src('.build/policies/win32/**', { base: '.build/policies/win32' })
-				.pipe(rename(f => f.dirname = `policies/${f.dirname}`)));
+				.pipe(rename(f => { f.dirname = `policies/${f.dirname}`; })));
 
 			if (quality === 'stable' || quality === 'insider') {
 				result = es.merge(result, gulp.src('.build/win32/appx/**', { base: '.build/win32' }));
@@ -626,7 +626,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 					.pipe(replace('@@FileExplorerContextMenuID@@', quality === 'stable' ? 'OpenWithCode' : 'OpenWithCodeInsiders'))
 					.pipe(replace('@@FileExplorerContextMenuCLSID@@', (product as { win32ContextMenu?: Record<string, { clsid: string }> }).win32ContextMenu![arch].clsid))
 					.pipe(replace('@@FileExplorerContextMenuDLL@@', `${quality === 'stable' ? 'code' : 'code_insider'}_explorer_command_${arch}.dll`))
-					.pipe(rename(f => f.dirname = `appx/manifest`)));
+					.pipe(rename(f => { f.dirname = `appx/manifest`; })));
 			}
 		} else if (platform === 'linux') {
 			result = es.merge(result, gulp.src('resources/linux/bin/code.sh', { base: '.' })
@@ -683,23 +683,6 @@ function patchWin32DependenciesTask(destinationFolderName: string) {
 	};
 }
 
-function prepareCopilotRipgrepShimTask(platform: string, arch: string, destinationFolderName: string) {
-	const outputDir = path.join(path.dirname(root), destinationFolderName);
-
-	return async () => {
-		// On Windows with win32VersionedUpdate, app resources live under a
-		// commit-hash prefix: {output}/{commitHash}/resources/app/
-		const versionedResourcesFolder = util.getVersionedResourcesFolder(platform, commit!);
-		const appBase = platform === 'darwin'
-			? path.join(outputDir, `${product.nameLong}.app`, 'Contents', 'Resources', 'app')
-			: path.join(outputDir, versionedResourcesFolder, 'resources', 'app');
-		const appNodeModulesDir = path.join(appBase, 'node_modules');
-
-		const builtInCopilotExtensionDir = path.join(appBase, 'extensions', 'copilot');
-		prepareBuiltInCopilotRipgrepShim(platform, arch, builtInCopilotExtensionDir, appNodeModulesDir);
-	};
-}
-
 const buildRoot = path.dirname(root);
 
 const BUILD_TARGETS = [
@@ -725,7 +708,6 @@ BUILD_TARGETS.forEach(buildTarget => {
 			compileNativeExtensionsBuildTask,
 			util.rimraf(path.join(buildRoot, destinationFolderName)),
 			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
-			prepareCopilotRipgrepShimTask(platform, arch, destinationFolderName)
 		];
 
 		if (platform === 'win32') {
@@ -751,7 +733,6 @@ BUILD_TARGETS.forEach(buildTarget => {
 				copyCodiconsTask,
 				cleanExtensionsBuildTask,
 				compileNonNativeExtensionsBuildTask,
-				compileCopilotExtensionBuildTask,
 				compileExtensionMediaBuildTask,
 				writeISODate('out-build'),
 				esbuildBundleTask,
@@ -762,7 +743,6 @@ BUILD_TARGETS.forEach(buildTarget => {
 				minified ? compileBuildWithManglingTask : compileBuildWithoutManglingTask,
 				cleanExtensionsBuildTask,
 				compileNonNativeExtensionsBuildTask,
-				compileCopilotExtensionBuildTask,
 				compileExtensionMediaBuildTask,
 				minified ? minifyVSCodeTask : bundleVSCodeTask,
 				vscodeTaskCI

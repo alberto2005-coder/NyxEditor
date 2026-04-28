@@ -74,12 +74,12 @@ function getExtensionDownloadStream(extension: IExtensionDefinition) {
 	if (extension.vsix) {
 		input = ext.fromVsix(path.join(root, extension.vsix), extension);
 	} else if (productjson.extensionsGallery?.serviceUrl) {
-		input = ext.fromMarketplace(productjson.extensionsGallery.serviceUrl, extension);
+		input = ext.fromMarketplace(productjson.extensionsGallery.serviceUrl, { ...extension, verbose: true } as any);
 	} else {
 		input = ext.fromGithub(extension);
 	}
 
-	return input.pipe(rename(p => p.dirname = `${extension.name}/${p.dirname}`));
+	return input.pipe(rename((p: any) => { p.dirname = `${extension.name}/${p.dirname}`; }));
 }
 
 export function getExtensionStream(extension: IExtensionDefinition) {
@@ -87,7 +87,7 @@ export function getExtensionStream(extension: IExtensionDefinition) {
 	if (isUpToDate(extension)) {
 		log('[extensions]', `${extension.name}@${extension.version} up to date`, ansiColors.green('✔︎'));
 		return vfs.src(['**'], { cwd: getExtensionPath(extension), dot: true })
-			.pipe(rename(p => p.dirname = `${extension.name}/${p.dirname}`));
+			.pipe(rename((p: any) => { p.dirname = `${extension.name}/${p.dirname}`; }));
 	}
 
 	return getExtensionDownloadStream(extension);
@@ -104,8 +104,7 @@ function syncMarketplaceExtension(extension: IExtensionDefinition): Stream {
 	rimraf.sync(getExtensionPath(extension));
 
 	return getExtensionDownloadStream(extension)
-		.pipe(vfs.dest('.build/builtInExtensions'))
-		.on('end', () => log(source, extension.name, ansiColors.green('✔︎')));
+		.pipe(vfs.dest('.build/builtInExtensions'));
 }
 
 function syncExtension(extension: IExtensionDefinition, controlState: 'disabled' | 'marketplace'): Stream {

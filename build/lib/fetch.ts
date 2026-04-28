@@ -18,7 +18,7 @@ export interface IFetchOptions {
 	checksumSha256?: string;
 }
 
-export function fetchUrls(urls: string[] | string, options: IFetchOptions): es.ThroughStream {
+export function fetchUrls(urls: string[] | string, options: IFetchOptions): NodeJS.ReadWriteStream {
 	if (options === undefined) {
 		options = {};
 	}
@@ -31,7 +31,7 @@ export function fetchUrls(urls: string[] | string, options: IFetchOptions): es.T
 		urls = [urls];
 	}
 
-	return es.readArray(urls).pipe(es.map<string, VinylFile | void>((data: string, cb) => {
+	return es.readArray(urls).pipe(through2.obj(function (data: string, _enc, cb) {
 		const url = [options.base, data].join('');
 		fetchUrl(url, options).then(file => {
 			cb(undefined, file);
