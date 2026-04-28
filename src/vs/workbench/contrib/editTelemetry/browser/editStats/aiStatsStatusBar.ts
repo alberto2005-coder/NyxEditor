@@ -178,7 +178,7 @@ export function createAiStatsHover(options: IAiStatsHoverOptions) {
 			}
 		},
 			[
-				n.div({ style: { flex: 1 } }, [localize('aiStatsStatusBarHeader', "AI Usage Statistics")]),
+				n.div({ style: { flex: 1 } }, [localize('aiStatsStatusBarHeader', "Nyx AI Statistics")]),
 				n.div({ style: { marginLeft: 'auto' } }, options.onOpenSettings
 					? actionBar([
 						{
@@ -199,11 +199,11 @@ export function createAiStatsHover(options: IAiStatsHoverOptions) {
 
 		n.div({ style: { display: 'flex' } }, [
 			n.div({ style: { flex: 1, paddingRight: '4px' } }, [
-				localize('text1', "AI vs Typing Average: {0}", aiRatePercent.get()),
+				localize('aiStats.efficiency', "Nyx AI Efficiency vs Typing: {0}", aiRatePercent.get()),
 			]),
 		]),
 		n.div({ style: { flex: 1, paddingRight: '4px' } }, [
-			localize('text2', "Accepted inline suggestions today: {0}", options.data.acceptedInlineSuggestionsToday.get()),
+			localize('aiStats.acceptedSuggestions', "Nyx suggestions accepted today: {0}", options.data.acceptedInlineSuggestionsToday.get()),
 		]),
 
 		// Chart section

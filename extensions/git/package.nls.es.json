@@ -1,0 +1,15 @@
+{
+	"displayName": "Git",
+	"description": "Integración de Git SCM",
+	"command.clone": "Clonar",
+	"command.init": "Inicializar repositorio",
+	"command.refresh": "Refrescar",
+	"command.openChange": "Abrir cambios",
+	"command.stage": "Sincronizar cambios",
+	"command.commit": "Confirmar",
+	"command.push": "Insertar (Push)",
+	"command.pull": "Extraer (Pull)",
+	"command.sync": "Sincronizar",
+	"config.enabled": "Indica si Git está habilitado.",
+	"submenu.explorer": "Git"
+}

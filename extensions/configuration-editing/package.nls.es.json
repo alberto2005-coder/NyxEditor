@@ -1,0 +1,4 @@
+{
+	"displayName": "Edición de configuración",
+	"description": "Proporciona capacidades de edición para archivos de configuración de VS Code como settings.json y launch.json."
+}

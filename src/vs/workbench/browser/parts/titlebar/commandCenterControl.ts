@@ -259,8 +259,8 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 		const kb = this._keybindingService.lookupKeybinding(this.action.id)?.getLabel();
 
 		const title = kb
-			? localize('title', "Explorar {0} ({1}) \u2014 {2}", workspaceName, kb, windowTitle)
-			: localize('title2', "Explorar {0} \u2014 {1}", workspaceName, windowTitle);
+			? localize('title', "Buscar en {0} ({1}) \u2014 {2}", workspaceName, kb, windowTitle)
+			: localize('title2', "Buscar en {0} \u2014 {1}", workspaceName, windowTitle);
 
 		return title;
 	}
@@ -268,7 +268,7 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 
 MenuRegistry.appendMenuItem(MenuId.CommandCenter, {
 	submenu: MenuId.CommandCenterCenter,
-	title: localize('title3', "Nyx Hub"),
+	title: localize('title3', "Centro de Nyx"),
 	icon: Codicon.shield,
 	order: 101,
 });
