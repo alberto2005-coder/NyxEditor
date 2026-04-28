@@ -1,0 +1,13 @@
+{
+	"search": "Buscar",
+	"miViewSearch": "&&Buscar",
+	"textSearchPickerPlaceholder": "Buscar texto en los archivos de su espacio de trabajo.",
+	"textSearchPickerHelp": "Buscar texto",
+	"searchConfigurationTitle": "Buscar",
+	"exclude": "Configurar patrones glob para excluir archivos y carpetas en las búsquedas.",
+	"search.mode": "Controla dónde se realizan las nuevas operaciones de búsqueda.",
+	"search.location": "Controla si la búsqueda se mostrará como una vista en la barra lateral o como un panel.",
+	"search.maxResults": "Controla el número máximo de resultados de búsqueda.",
+	"search.collapseAllResults": "Controla si los resultados de búsqueda se contraerán o expandirán.",
+	"search.sortOrder": "Controla el orden de clasificación de los resultados de búsqueda."
+}

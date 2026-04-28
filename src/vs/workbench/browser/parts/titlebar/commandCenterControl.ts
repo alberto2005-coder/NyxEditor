@@ -254,10 +254,13 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 	protected override getTooltip() {
 
 		// tooltip: full windowTitle
+		const workspaceName = this._windowTitle.workspaceName || localize('nyx', "Nyx");
+		const windowTitle = this._windowTitle.fileName || localize('editor', "Editor");
 		const kb = this._keybindingService.lookupKeybinding(this.action.id)?.getLabel();
+
 		const title = kb
-			? localize('title', "Search {0} ({1}) \u2014 {2}", this._windowTitle.workspaceName, kb, this._windowTitle.value)
-			: localize('title2', "Search {0} \u2014 {1}", this._windowTitle.workspaceName, this._windowTitle.value);
+			? localize('title', "Explorar {0} ({1}) \u2014 {2}", workspaceName, kb, windowTitle)
+			: localize('title2', "Explorar {0} \u2014 {1}", workspaceName, windowTitle);
 
 		return title;
 	}
@@ -265,7 +268,7 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 
 MenuRegistry.appendMenuItem(MenuId.CommandCenter, {
 	submenu: MenuId.CommandCenterCenter,
-	title: localize('title3', "Command Center"),
+	title: localize('title3', "Nyx Hub"),
 	icon: Codicon.shield,
 	order: 101,
 });

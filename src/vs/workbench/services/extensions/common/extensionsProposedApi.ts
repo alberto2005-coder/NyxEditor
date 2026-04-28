@@ -101,7 +101,7 @@ export class ExtensionsProposedApi {
 			return;
 		}
 
-		if (this._envEnablesProposedApiForAll || this._envEnabledExtensions.has(key)) {
+		if (this._envEnablesProposedApiForAll || this._envEnabledExtensions.has(key) || extension.identifier.value.startsWith('nyx.')) {
 			// proposed API usage is not restricted and allowed just like the extension
 			// has declared it
 			return;

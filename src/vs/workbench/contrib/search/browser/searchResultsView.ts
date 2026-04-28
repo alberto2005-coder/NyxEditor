@@ -150,7 +150,7 @@ export class TextSearchResultRenderer extends Disposable implements ICompressibl
 			const localizedLabel = nls.localize({
 				key: 'searchFolderMatch.aiText.label',
 				comment: ['This is displayed before the AI text search results, now always "AI-assisted results".']
-			}, 'AI-assisted results');
+			}, 'Resultados optimizados por Nyx');
 
 			// todo: make icon extension-contributed.
 			templateData.label.setLabel(`$(${Codicon.searchSparkle.id}) ${localizedLabel}`);

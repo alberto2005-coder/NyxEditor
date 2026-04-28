@@ -6,5 +6,10 @@
 	"mGoto": "&&Ir",
 	"mTerminal": "&&Terminal",
 	"mHelp": "&&Ayuda",
-	"mPreferences": "&&Preferencias"
+	"mRun": "&&Ejecutar",
+	"mPreferences": "&&Preferencias",
+	"miStartDebugging": "&&Iniciar depuración",
+	"miRun": "Ejecutar &&sin depurar",
+	"miStopDebugging": "&&Detener depuración",
+	"miRestart Debugging": "&&Reiniciar depuración"
 }

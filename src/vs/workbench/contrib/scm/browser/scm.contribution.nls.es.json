@@ -1,0 +1,11 @@
+{
+	"source control": "Control de código fuente",
+	"source control view": "Control de código fuente",
+	"scmRepositories": "Repositorios",
+	"scmChanges": "Cambios",
+	"scmGraph": "Gráfico",
+	"miViewSCM": "Control de &&código fuente",
+	"no open repo": "No hay proveedores de control de código fuente registrados.",
+	"scmConfigurationTitle": "Control de código fuente",
+	"scm accept": "Control de código fuente: Aceptar entrada"
+}

@@ -7,7 +7,7 @@ import { URI } from '../../../base/common/uri.js';
 import type { IFileEditRecord, ISessionDatabase } from '../common/sessionDataService.js';
 import type { IDiffComputeService } from '../common/diffComputeService.js';
 import { FileEditKind, type ISessionFileDiff } from '../common/state/sessionState.js';
-import { buildSessionDbUri } from './copilot/fileEditTracker.js';
+
 
 function getFileEditUri(diff: ISessionFileDiff): string | undefined {
 	return diff.after?.uri ?? diff.before?.uri;
@@ -20,13 +20,13 @@ function createSessionFileDiff(sessionUri: string, identity: IFileIdentity, adde
 		...(hasBefore ? {
 			before: {
 				uri: URI.file(identity.firstFilePath).toString(),
-				content: { uri: buildSessionDbUri(sessionUri, identity.firstToolCallId, identity.firstFilePath, 'before') },
+				content: { uri: `session-db:/${encodeURIComponent(sessionUri)}/${identity.firstToolCallId}/${encodeURIComponent(identity.firstFilePath)}/before` },
 			},
 		} : {}),
 		...(hasAfter ? {
 			after: {
 				uri: URI.file(identity.terminalPath).toString(),
-				content: { uri: buildSessionDbUri(sessionUri, identity.lastToolCallId, identity.lastFilePath, 'after') },
+				content: { uri: `session-db:/${encodeURIComponent(sessionUri)}/${identity.lastToolCallId}/${encodeURIComponent(identity.lastFilePath)}/after` },
 			},
 		} : {}),
 		diff: { added, removed },

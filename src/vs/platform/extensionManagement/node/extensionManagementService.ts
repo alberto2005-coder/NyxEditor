@@ -340,7 +340,7 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 	private async downloadExtension(extension: IGalleryExtension, operation: InstallOperation, verifySignature: boolean, clientTargetPlatform?: TargetPlatform): Promise<{ readonly location: URI; readonly verificationStatus: ExtensionSignatureVerificationCode | undefined }> {
 		if (verifySignature) {
 			const value = this.configurationService.getValue(VerifyExtensionSignatureConfigKey);
-			verifySignature = isBoolean(value) ? value : true;
+			verifySignature = isBoolean(value) ? value : false;
 		}
 		const { location, verificationStatus } = await this.extensionsDownloader.download(extension, operation, verifySignature, clientTargetPlatform);
 		const shouldRequireSignature = shouldRequireRepositorySignatureFor(extension.private, await this.extensionGalleryManifestService.getExtensionGalleryManifest());
@@ -359,6 +359,7 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 				this.logService.warn(`Error while deleting the downloaded file`, location.toString(), getErrorMessage(e));
 			}
 
+			/*
 			if (!verificationStatus) {
 				throw new ExtensionManagementError(nls.localize('signature verification not executed', "Signature verification was not executed."), ExtensionManagementErrorCode.SignatureVerificationInternal);
 			}
@@ -379,6 +380,8 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 			}
 
 			throw new ExtensionManagementError(nls.localize('signature verification failed', "Signature verification failed with '{0}' error.", verificationStatus), ExtensionManagementErrorCode.SignatureVerificationInternal);
+			*/
+			this.logService.warn(`Signature verification failed with status ${verificationStatus}, but continuing installation as per NyxEditor configuration.`);
 		}
 
 		return { location, verificationStatus };

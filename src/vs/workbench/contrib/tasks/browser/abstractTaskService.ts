@@ -85,10 +85,6 @@ import { IPathService } from '../../../services/path/common/pathService.js';
 import { IPreferencesService } from '../../../services/preferences/common/preferences.js';
 import { IRemoteAgentService } from '../../../services/remote/common/remoteAgentService.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
-import { CHAT_OPEN_ACTION_ID } from '../../chat/browser/actions/chatActions.js';
-import { IChatAgentService } from '../../chat/common/participants/chatAgents.js';
-import { IChatService } from '../../chat/common/chatService/chatService.js';
-import { configureTaskIcon, isWorkspaceFolder, ITaskQuickPickEntry, QUICKOPEN_DETAIL_CONFIG, QUICKOPEN_SKIP_CONFIG, TaskQuickPick } from './taskQuickPick.js';
 import { IHostService } from '../../../services/host/browser/host.js';
 import * as dom from '../../../../base/browser/dom.js';
 import { FocusMode } from '../../../../platform/native/common/native.js';
@@ -296,8 +292,6 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 		@ILifecycleService private readonly _lifecycleService: ILifecycleService,
 		@IRemoteAgentService remoteAgentService: IRemoteAgentService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IChatService private readonly _chatService: IChatService,
-		@IChatAgentService private readonly _chatAgentService: IChatAgentService,
 		@IHostService private readonly _hostService: IHostService
 	) {
 		super();
@@ -511,7 +505,7 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 		}
 
 		const taskRunSource = this._taskRunSources.get(event.taskId);
-		if (taskRunSource === TaskRunSource.ChatAgent) {
+		if (taskRunSource === TaskRunSource.Reconnect) {
 			return;
 		}
 
@@ -796,44 +790,13 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 		if (!VirtualWorkspaceContext.getValue(this._contextKeyService) && ((runSource === TaskRunSource.User) || (runSource === TaskRunSource.ConfigurationChange))) {
 			if (userRequested) {
 				this._outputService.showChannel(this._outputChannel.id, true);
-			} else {
-				const chatEnabled = this._chatService.isEnabled(ChatAgentLocation.Chat);
-				const actions = [];
-				if (chatEnabled && errorMessage) {
-					const beforeJSONregex = /^(.*?)\s*\{[\s\S]*$/;
-					const matches = errorMessage.match(beforeJSONregex);
-					if (matches && matches.length > 1) {
-						const message = matches[1];
-						const customMessage = message === errorMessage
-							? `\`${message}\``
-							: `\`${message}\`\n\`\`\`json${errorMessage}\`\`\``;
-
-
-						const defaultAgent = this._chatAgentService.getDefaultAgent(ChatAgentLocation.Chat);
-						if (defaultAgent) {
-							actions.push({
-								label: nls.localize('troubleshootWithChat', "Fix with AI"),
-								run: async () => {
-									this._commandService.executeCommand(CHAT_OPEN_ACTION_ID, {
-										mode: ChatModeKind.Agent,
-										query: `Fix this task configuration error: ${customMessage}`
-									});
-								}
-							});
-						}
-					}
-				}
-				actions.push({
+			} else if (errorMessage) {
+				this._notificationService.prompt(Severity.Warning, nls.localize('taskServiceOutputPrompt', 'There are task errors. See the output for details.'), [{
 					label: nls.localize('showOutput', "Show Output"),
 					run: () => {
 						this._outputService.showChannel(this._outputChannel.id, true);
 					}
-				});
-				if (chatEnabled && actions.length > 1) {
-					this._notificationService.prompt(Severity.Warning, nls.localize('taskServiceOutputPromptChat', 'There are task errors. Use chat to fix them or view the output for details.'), actions);
-				} else {
-					this._notificationService.prompt(Severity.Warning, nls.localize('taskServiceOutputPrompt', 'There are task errors. See the output for details.'), actions);
-				}
+				}]);
 			}
 		}
 	}

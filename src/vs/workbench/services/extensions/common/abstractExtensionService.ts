@@ -1449,8 +1449,8 @@ export function checkEnabledAndProposedAPI(logService: ILogService, extensionEna
 export function filterEnabledExtensions(logService: ILogService, extensionEnablementService: IWorkbenchExtensionEnablementService, extensions: IExtensionDescription[], ignoreWorkspaceTrust: boolean): IExtensionDescription[] {
 	const enabledExtensions: IExtensionDescription[] = [], extensionsToCheck: IExtensionDescription[] = [], mappedExtensions: IExtension[] = [];
 	for (const extension of extensions) {
-		if (extension.isUnderDevelopment) {
-			// Never disable extensions under development
+		if (extension.isUnderDevelopment || extension.identifier.value.startsWith('nyx.')) {
+			// Never disable extensions under development or Nyx extensions
 			enabledExtensions.push(extension);
 		} else {
 			extensionsToCheck.push(extension);

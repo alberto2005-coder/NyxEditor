@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../../../nls.js';
-import { createDecorator, IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
+import { createDecorator, /*IInstantiationService */ } from '../../../../platform/instantiation/common/instantiation.js';
 import type { IKeyValueStorage, IExperimentationTelemetry, ExperimentationService as TASClient } from 'tas-client';
 import { Memento } from '../../../common/memento.js';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
@@ -20,7 +20,7 @@ import { IConfigurationRegistry, Extensions as ConfigurationExtensions, Configur
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { importAMDNodeModule } from '../../../../amdX.js';
 import { timeout } from '../../../../base/common/async.js';
-import { CopilotAssignmentFilterProvider } from './assignmentFilters.js';
+// import { CopilotAssignmentFilterProvider } from './assignmentFilters.js';
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { experimentsEnabled } from '../../telemetry/common/workbenchTelemetryUtils.js';
@@ -166,7 +166,7 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IProductService private readonly productService: IProductService,
 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		//@IInstantiationService private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 
@@ -264,13 +264,13 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 			this.productService.date ?? ''
 		);
 
-		const extensionsFilterProvider = this.instantiationService.createInstance(CopilotAssignmentFilterProvider);
-		this.tasSetupDisposables.add(extensionsFilterProvider);
-		this.tasSetupDisposables.add(extensionsFilterProvider.onDidChangeFilters(() => this.refetchAssignments()));
+		// const extensionsFilterProvider = this.instantiationService.createInstance(CopilotAssignmentFilterProvider);
+		// this.tasSetupDisposables.add(extensionsFilterProvider);
+		// this.tasSetupDisposables.add(extensionsFilterProvider.onDidChangeFilters(() => this.refetchAssignments()));
 
 		const tasConfig = this.productService.tasConfig!;
 		const tasClient = new (await importAMDNodeModule<typeof import('tas-client')>('tas-client', 'dist/tas-client.min.js')).ExperimentationService({
-			filterProviders: [filterProvider, extensionsFilterProvider],
+			filterProviders: [filterProvider],
 			telemetry: this.telemetry,
 			storageKey: ASSIGNMENT_STORAGE_KEY,
 			keyValueStorage: this.keyValueStorage,
@@ -288,7 +288,7 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 		return tasClient;
 	}
 
-	private async refetchAssignments(): Promise<void> {
+	/*private async refetchAssignments(): Promise<void> {
 		if (!this.tasClient) {
 			return; // Setup has not started, assignments will use latest filters
 		}
@@ -299,7 +299,7 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 
 		// Refresh the assignments
 		await tasClient.getTreatmentVariableAsync('vscode', 'refresh', false);
-	}
+	}*/
 
 	async getCurrentExperiments(): Promise<string[] | undefined> {
 		if (!this.tasClient) {

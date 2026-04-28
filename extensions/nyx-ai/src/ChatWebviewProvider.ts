@@ -76,16 +76,20 @@ export class ChatWebviewProvider implements vscode.WebviewViewProvider {
                         workspaceContext += `Carpeta abierta: ${workspaceFolders[0].name}\n`;
                     }
 
-                    // PEDIR DATOS AL DASHBOARD (nyx-viz)
+                    // PEDIR DATOS AL DASHBOARD (nyx-viz) con timeout de seguridad
                     try {
-                        const vizData: any = await vscode.commands.executeCommand('nyx-viz.getProjectData');
+                        const vizPromise = vscode.commands.executeCommand('nyx-viz.getProjectData');
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
+                        
+                        const vizData: any = await Promise.race([vizPromise, timeoutPromise]);
+                        
                         if (vizData) {
                             workspaceContext += `\nMAPA DE DEPENDENCIAS:\n${vizData.edges.map((e:any) => `${e.from} -> ${e.to}`).join('\n')}\n`;
                             workspaceContext += `\nTAREAS DETECTADAS (TODO/BUG):\n${vizData.tasks.map((t:any) => `- [${t.type}] ${t.text} (${t.file})`).join('\n')}\n`;
                             workspaceContext += `\nZONAS CALIENTES (GIT):\n${vizData.hotZones.map((h:any) => `- ${h.file} (${h.commits} commits recientes)`).join('\n')}\n`;
                         }
                     } catch (e) {
-                        // Si nyx-viz no está instalada o falla, seguimos con contexto básico
+                        console.log('[Nyx AI] Continuando sin datos de nyx-viz (Timeout o no instalada)');
                     }
 
                     const activeEditor = vscode.window.activeTextEditor;

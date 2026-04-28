@@ -3,6 +3,7 @@
     "displayName": "Nyx AI Core",
     "description": "IA Engine for NyxEditor",
     "version": "1.0.0",
+    "publisher": "nyx",
     "engines": {
         "vscode": "^1.80.0"
     },

@@ -118,17 +118,15 @@ let nlsConfigurationPromise: Promise<INLSConfiguration> | undefined = undefined;
 // The API might return an empty array on Linux, such as when
 // the 'C' locale is the user's only configured locale.
 // No matter the OS, if the array is empty, default back to 'en'.
-const osLocale = processZhLocale((app.getPreferredSystemLanguages()?.[0] ?? 'en').toLowerCase());
-const userLocale = getUserDefinedLocale(argvConfig);
-if (userLocale) {
-	nlsConfigurationPromise = resolveNLSConfiguration({
-		userLocale,
-		osLocale,
-		commit: product.commit,
-		userDataPath,
-		nlsMetadataPath: import.meta.dirname
-	});
-}
+const osLocale = 'es';
+const userLocale = getUserDefinedLocale(argvConfig) ?? 'es';
+nlsConfigurationPromise = resolveNLSConfiguration({
+	userLocale,
+	osLocale,
+	commit: product.commit,
+	userDataPath,
+	nlsMetadataPath: import.meta.dirname
+});
 
 // Pass in the locale to Electron so that the
 // Windows Control Overlay is rendered correctly on Windows.
@@ -139,7 +137,7 @@ if (userLocale) {
 // In that case, use `en` as the Electron locale.
 
 if (process.platform === 'win32' || process.platform === 'linux') {
-	const electronLocale = (!userLocale || userLocale === 'qps-ploc') ? 'en' : userLocale;
+	const electronLocale = (!userLocale || userLocale === 'qps-ploc') ? 'es' : userLocale;
 	app.commandLine.appendSwitch('lang', electronLocale);
 }
 
@@ -657,28 +655,6 @@ async function mkdirpIgnoreError(dir: string | undefined): Promise<string | unde
 
 //#region NLS Support
 
-function processZhLocale(appLocale: string): string {
-	if (appLocale.startsWith('zh')) {
-		const region = appLocale.split('-')[1];
-
-		// On Windows and macOS, Chinese languages returned by
-		// app.getPreferredSystemLanguages() start with zh-hans
-		// for Simplified Chinese or zh-hant for Traditional Chinese,
-		// so we can easily determine whether to use Simplified or Traditional.
-		// However, on Linux, Chinese languages returned by that same API
-		// are of the form zh-XY, where XY is a country code.
-		// For China (CN), Singapore (SG), and Malaysia (MY)
-		// country codes, assume they use Simplified Chinese.
-		// For other cases, assume they use Traditional.
-		if (['hans', 'cn', 'sg', 'my'].includes(region)) {
-			return 'zh-cn';
-		}
-
-		return 'zh-tw';
-	}
-
-	return appLocale;
-}
 
 /**
  * Resolve the NLS configuration
@@ -700,9 +676,9 @@ async function resolveNlsConfiguration(): Promise<INLSConfiguration> {
 	let userLocale = app.getLocale();
 	if (!userLocale) {
 		return {
-			userLocale: 'en',
+			userLocale: 'es',
 			osLocale,
-			resolvedLanguage: 'en',
+			resolvedLanguage: 'es',
 			defaultMessagesFile: path.join(import.meta.dirname, 'nls.messages.json'),
 
 			// NLS: below 2 are a relic from old times only used by vscode-nls and deprecated
@@ -712,11 +688,11 @@ async function resolveNlsConfiguration(): Promise<INLSConfiguration> {
 	}
 
 	// See above the comment about the loader and case sensitiveness
-	userLocale = processZhLocale(userLocale.toLowerCase());
+	userLocale = 'es';
 
 	return resolveNLSConfiguration({
-		userLocale,
-		osLocale,
+		userLocale: 'es',
+		osLocale: 'es',
 		commit: product.commit,
 		userDataPath,
 		nlsMetadataPath: import.meta.dirname
