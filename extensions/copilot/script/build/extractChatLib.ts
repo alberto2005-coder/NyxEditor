@@ -5,7 +5,7 @@
 
 import { exec } from 'child_process';
 import * as fs from 'fs';
-import { glob } from 'glob';
+import glob from 'glob';
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -108,7 +108,7 @@ class ChatLibExtractor {
 		console.log('Processing entry points and dependencies...');
 
 		// Start with static entry points and dynamically add all test files
-		const testFiles = await glob('src/lib/vscode-node/test/*.ts', { cwd: REPO_ROOT });
+		const testFiles = glob.sync('src/lib/vscode-node/test/*.ts', { cwd: REPO_ROOT });
 		const queue = [...entryPoints, ...testFiles];
 
 		while (queue.length > 0) {
@@ -541,7 +541,7 @@ class ChatLibExtractor {
 
 		// Find all .reply.txt files in src/lib/vscode-node/test/
 		const testDir = path.join(REPO_ROOT, 'src', 'lib', 'vscode-node', 'test');
-		const replyFiles = await glob('*.reply.txt', { cwd: testDir });
+		const replyFiles = glob.sync('*.reply.txt', { cwd: testDir });
 
 		for (const file of replyFiles) {
 			const srcPath = path.join(testDir, file);
@@ -700,7 +700,7 @@ class ChatLibExtractor {
 
 		// Find all .tiktoken files in src/platform/tokenizer/node/
 		const tokenizerDir = path.join(REPO_ROOT, 'src', 'platform', 'tokenizer', 'node');
-		const tikTokenFiles = await glob('*.tiktoken', { cwd: tokenizerDir });
+		const tikTokenFiles = glob.sync('*.tiktoken', { cwd: tokenizerDir });
 
 		for (const file of tikTokenFiles) {
 			const srcPath = path.join(tokenizerDir, file);
