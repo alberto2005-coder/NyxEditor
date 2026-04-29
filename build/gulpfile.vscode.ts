@@ -339,6 +339,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 
 		const extensions = es.merge(
 			gulp.src(['.build/extensions/**', ...platformSpecificBuiltInExtensionsExclusions], { base: '.build', dot: true }),
+			gulp.src(['.build/builtInExtensions/**', ...platformSpecificBuiltInExtensionsExclusions], { base: '.build/builtInExtensions', dot: true }).pipe(rename(p => { p.dirname = `extensions/${p.dirname}`; })),
 			gulp.src(['extensions/nyx-*/**', '!extensions/nyx-*/src/**', '!extensions/nyx-*/.antigravityignore'], { base: '.', dot: true })
 		);
 

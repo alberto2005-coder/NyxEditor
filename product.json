@@ -85,6 +85,38 @@
 				},
 				"publisherDisplayName": "Microsoft"
 			}
+		},
+		{
+			"name": "GitLab.gitlab-workflow",
+			"version": "6.75.0",
+			"sha256": "ea92d1442c76986a9e2263b4dd7850797ff8d5ab82dc5170006e5f06cd6bd76a",
+			"repo": "https://gitlab.com/gitlab-org/gitlab-vscode-extension.git",
+			"metadata": {
+				"id": "GitLab.gitlab-workflow",
+				"publisherId": {
+					"publisherId": "gitlab",
+					"publisherName": "GitLab",
+					"displayName": "GitLab",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "GitLab"
+			}
+		},
+		{
+			"name": "PKief.material-icon-theme",
+			"version": "5.34.0",
+			"sha256": "f49c41cea279025d26f61b6122c53289474e291973ef6a36e452185a63a2aa6b",
+			"repo": "https://github.com/material-extensions/vscode-material-icon-theme.git",
+			"metadata": {
+				"id": "PKief.material-icon-theme",
+				"publisherId": {
+					"publisherId": "pkief",
+					"publisherName": "pkief",
+					"displayName": "PKief",
+					"flags": "verified"
+				},
+				"publisherDisplayName": "PKief"
+			}
 		}
 	],
 	"trustedExtensionAuthAccess": {
@@ -178,6 +210,8 @@
 		"ms-vscode.js-debug",
 		"ms-vscode.js-debug-companion",
 		"ms-vscode.vscode-js-profile-table",
+		"GitLab.gitlab-workflow",
+		"PKief.material-icon-theme",
 		"nyx.nyx-ai",
 		"nyx.nyx-net",
 		"nyx.nyx-synapse",
@@ -187,6 +221,8 @@
 		"ms-vscode.js-debug",
 		"ms-vscode.js-debug-companion",
 		"ms-vscode.vscode-js-profile-table",
+		"GitLab.gitlab-workflow",
+		"PKief.material-icon-theme",
 		"nyx.nyx-ai",
 		"nyx.nyx-net",
 		"nyx.nyx-synapse",

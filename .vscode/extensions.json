@@ -4,10 +4,9 @@
 	"recommendations": [
 		"dbaeumer.vscode-eslint",
 		"editorconfig.editorconfig",
-		"github.vscode-pull-request-github",
-		"ms-vscode.vscode-github-issue-notebooks",
+		"gitlab.gitlab-workflow",
+		"pkief.material-icon-theme",
 		"ms-vscode.extension-test-runner",
-		"jrieken.vscode-pr-pinger",
 		"typescriptteam.native-preview",
 		"ms-vscode.ts-customized-language-service"
 	]
