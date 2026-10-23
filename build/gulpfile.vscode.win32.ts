@@ -23,7 +23,26 @@ const repoPath = path.dirname(import.meta.dirname);
 const commit = getVersion(repoPath);
 const buildPath = (arch: string) => path.join(path.dirname(repoPath), `VSCode-win32-${arch}`);
 const setupDir = (arch: string, target: string) => path.join(repoPath, '.build', `win32-${arch}`, `${target}-setup`);
-const innoSetupPath = path.join(path.dirname(path.dirname(require.resolve('innosetup'))), 'bin', 'ISCC.exe');
+function getInnoSetupPath(): string {
+	if (process.env['INNO_SETUP_PATH'] && fs.existsSync(process.env['INNO_SETUP_PATH'])) {
+		return process.env['INNO_SETUP_PATH'];
+	}
+	const inno7Candidates = [
+		'C:\\Program Files\\Inno Setup 7\\ISCC.exe',
+		'C:\\Program Files (x86)\\Inno Setup 7\\ISCC.exe',
+	];
+	for (const candidate of inno7Candidates) {
+		if (fs.existsSync(candidate)) {
+			return candidate;
+		}
+	}
+	try {
+		return path.join(path.dirname(path.dirname(require.resolve('innosetup'))), 'bin', 'ISCC.exe');
+	} catch {
+		return 'ISCC.exe';
+	}
+}
+const innoSetupPath = getInnoSetupPath();
 const signWin32Path = path.join(repoPath, 'build', 'azure-pipelines', 'common', 'sign-win32.ts');
 
 function packageInnoSetup(iss: string, options: { definitions?: Record<string, unknown> }, cb: (err?: Error | null) => void) {
@@ -48,6 +67,7 @@ function packageInnoSetup(iss: string, options: { definitions?: Record<string, u
 		`/sesrp=node ${signWin32Path} $f`
 	];
 
+	console.log(`Using Inno Setup compiler: ${innoSetupPath}`);
 	cp.spawn(innoSetupPath, args, { stdio: ['ignore', 'inherit', 'inherit'] })
 		.on('error', cb)
 		.on('exit', code => {
@@ -71,6 +91,21 @@ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
 		const sourcePath = buildPath(arch);
 		const outputPath = setupDir(arch, target);
 		fs.mkdirSync(outputPath, { recursive: true });
+
+		// Ensure tools/inno_updater.exe exists in sourcePath
+		const innoUpdaterTool = path.join(sourcePath, 'tools', 'inno_updater.exe');
+		if (!fs.existsSync(innoUpdaterTool)) {
+			const toolsDir = path.join(sourcePath, 'tools');
+			fs.mkdirSync(toolsDir, { recursive: true });
+			const srcUpdater = path.join(repoPath, 'build', 'win32', 'inno_updater.exe');
+			const srcVcruntime = path.join(repoPath, 'build', 'win32', 'vcruntime140.dll');
+			if (fs.existsSync(srcUpdater)) {
+				fs.copyFileSync(srcUpdater, innoUpdaterTool);
+			}
+			if (fs.existsSync(srcVcruntime)) {
+				fs.copyFileSync(srcVcruntime, path.join(toolsDir, 'vcruntime140.dll'));
+			}
+		}
 
 		const quality = (product as typeof product & { quality?: string }).quality || 'dev';
 		const useVersionedUpdate = (product as typeof product & { win32VersionedUpdate?: boolean })?.win32VersionedUpdate;
@@ -109,7 +144,12 @@ function buildWin32Setup(arch: string, target: string): task.CallbackTask {
 			InstallTarget: target,
 			ProductJsonPath: productJsonPath,
 			VersionedResourcesFolder: versionedResourcesFolder,
-			Quality: quality
+			Quality: quality,
+			AppPublisher: 'NyxEditor',
+			AppPublisherURL: 'https://github.com/alberto2005-coder/NyxEditor',
+			AppSupportURL: 'https://github.com/alberto2005-coder/NyxEditor/issues',
+			AppUpdatesURL: 'https://github.com/alberto2005-coder/NyxEditor/releases',
+			OutputBaseFilename: `${product.nameShort}Setup`
 		};
 
 		const isInsiderOrExploration = quality === 'insider' || quality === 'exploration';
@@ -169,3 +209,35 @@ function updateIcon(executablePath: string): task.CallbackTask {
 
 gulp.task(task.define('vscode-win32-x64-inno-updater', task.series(copyInnoUpdater('x64'), updateIcon(path.join(buildPath('x64'), 'tools', 'inno_updater.exe')))));
 gulp.task(task.define('vscode-win32-arm64-inno-updater', task.series(copyInnoUpdater('arm64'), updateIcon(path.join(buildPath('arm64'), 'tools', 'inno_updater.exe')))));
+
+function buildWin32Portable(arch: string): task.PromiseTask {
+	return () => {
+		const sourcePath = buildPath(arch);
+		const dataDir = path.join(sourcePath, 'data');
+		const tmpDir = path.join(dataDir, 'tmp');
+		if (!fs.existsSync(tmpDir)) {
+			fs.mkdirSync(tmpDir, { recursive: true });
+		}
+		const outputDir = path.join(repoPath, '.build', `win32-${arch}`);
+		fs.mkdirSync(outputDir, { recursive: true });
+		const zipName = `${product.nameShort}-win32-${arch}-portable.zip`;
+		const zipPath = path.join(outputDir, zipName);
+
+		console.log(`Creating portable zip: ${zipPath}`);
+		return new Promise<void>((resolve, reject) => {
+			const tar = cp.spawn('tar.exe', ['-a', '-c', '-f', zipPath, '-C', sourcePath, '.'], { stdio: 'inherit' });
+			tar.on('error', reject);
+			tar.on('exit', code => {
+				if (code === 0) {
+					console.log(`Portable release created successfully: ${zipPath}`);
+					resolve();
+				} else {
+					reject(new Error(`tar exited with code ${code}`));
+				}
+			});
+		});
+	};
+}
+
+gulp.task(task.define('vscode-win32-x64-portable', buildWin32Portable('x64')));
+gulp.task(task.define('vscode-win32-arm64-portable', buildWin32Portable('arm64')));

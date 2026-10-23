@@ -28,6 +28,7 @@ export const all = Object.freeze<string[]>([
 	'!test/**/out/**',
 	'!**/node_modules/**',
 	'!**/*.js.map',
+	'!build/config.gypi',
 ]);
 
 export const unicodeFilter = Object.freeze<string[]>([

@@ -8,14 +8,34 @@
 AppId={#AppId}
 AppName={#NameLong}
 AppVerName={#NameVersion}
-AppPublisher=Microsoft Corporation
-AppPublisherURL=https://code.visualstudio.com/
-AppSupportURL=https://code.visualstudio.com/
-AppUpdatesURL=https://code.visualstudio.com/
+#ifdef AppPublisher
+AppPublisher={#AppPublisher}
+#else
+AppPublisher=Alberto Ortiz
+#endif
+#ifdef AppPublisherURL
+AppPublisherURL={#AppPublisherURL}
+#else
+AppPublisherURL=https://github.com/alberto2005-coder/NyxEditor
+#endif
+#ifdef AppSupportURL
+AppSupportURL={#AppSupportURL}
+#else
+AppSupportURL=https://github.com/alberto2005-coder/NyxEditor/issues
+#endif
+#ifdef AppUpdatesURL
+AppUpdatesURL={#AppUpdatesURL}
+#else
+AppUpdatesURL=https://github.com/alberto2005-coder/NyxEditor/releases
+#endif
 DefaultGroupName={#NameLong}
 AllowNoIcons=yes
 OutputDir={#OutputDir}
+#ifdef OutputBaseFilename
+OutputBaseFilename={#OutputBaseFilename}
+#else
 OutputBaseFilename=VSCodeSetup
+#endif
 Compression=lzma
 SolidCompression=yes
 AppMutex={code:GetAppMutex}

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "code-oss-dev",
   "version": "1.118.0",
   "distro": "44a02d0d07de5cbb9ab43fd345dd5c8f3cfd08f8",
@@ -76,6 +76,10 @@
     "minify-vscode": "npm run gulp minify-vscode",
     "minify-vscode-reh": "npm run gulp minify-vscode-reh",
     "minify-vscode-reh-web": "npm run gulp minify-vscode-reh-web",
+    "release:setup": "npm run gulp vscode-win32-x64-user-setup",
+    "release:setup-system": "npm run gulp vscode-win32-x64-system-setup",
+    "release:setup-all": "npm run gulp vscode-win32-x64-user-setup && npm run gulp vscode-win32-x64-system-setup",
+    "release:portable": "npm run gulp vscode-win32-x64-portable",
     "hygiene": "npm run gulp hygiene",
     "core-ci": "npm run gulp core-ci",
     "core-ci-pr": "npm run gulp core-ci-pr",

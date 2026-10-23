@@ -502,7 +502,7 @@
     "python": "C:\\Users\\alors\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
     "standalone_static_library": 1,
     "msbuild_path": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe",
-    "user_agent": "npm/11.9.0 node/v24.14.0 win32 x64 workspaces/false",
+    "user_agent": "npm/11.9.0 node/v24.22.1 win32 x64 workspaces/false",
     "userconfig": "C:\\Users\\alors\\.npmrc",
     "timeout": "180000",
     "target": "39.8.8",
