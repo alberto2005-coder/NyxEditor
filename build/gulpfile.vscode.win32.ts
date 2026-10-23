@@ -225,7 +225,7 @@ function buildWin32Portable(arch: string): task.PromiseTask {
 
 		console.log(`Creating portable zip: ${zipPath}`);
 		return new Promise<void>((resolve, reject) => {
-			const tar = cp.spawn('tar.exe', ['-a', '-c', '-f', zipPath, '-C', sourcePath, '.'], { stdio: 'inherit' });
+			const tar = cp.spawn('tar.exe', ['-a', '-c', '-f', zipPath, '*'], { cwd: sourcePath, shell: true, stdio: 'inherit' });
 			tar.on('error', reject);
 			tar.on('exit', code => {
 				if (code === 0) {
